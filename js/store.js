@@ -3,7 +3,8 @@ import {
   doc,
   getDoc,
   serverTimestamp,
-  setDoc
+  setDoc,
+  updateDoc
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { db } from './firebase.js';
 
@@ -16,4 +17,9 @@ export async function getProfile(uid) {
 /** First save after onboarding. Timestamps are set by the server. */
 export async function createProfile(uid, data) {
   await setDoc(doc(db, 'users', uid), { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+}
+
+/** Remembers the last gym/home choice. @param {'gym'|'home'} location */
+export async function setLastLocation(uid, location) {
+  await updateDoc(doc(db, 'users', uid), { lastLocation: location, updatedAt: serverTimestamp() });
 }

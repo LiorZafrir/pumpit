@@ -196,3 +196,41 @@
   transition: border-color var(--t-fast), background var(--t-fast);
 }
 .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+/* Home */
+.home { gap: 18px; }
+.home-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-block-start: 8px; }
+.streak {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding-inline: 14px;
+  border-radius: var(--r-pill); background: var(--card-strong); border: 1px solid var(--line);
+  color: var(--accent); font-weight: 800; font-size: 18px;
+}
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding-block: 10px;
+  border-radius: var(--r-sm); background: var(--card); border: 1px solid transparent; color: var(--text-3);
+}
+.day-letter { font-size: 12px; }
+.day-num { font-size: 16px; font-weight: 700; color: var(--text-2); }
+.day.today { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.day.today .day-letter, .day.today .day-num { color: var(--accent); }
+.day.done { background: var(--accent); }
+.day.done .day-letter, .day.done .day-num { color: var(--on-accent); }
+
+.workout-card { display: flex; flex-direction: column; gap: 16px; }
+.workout-title { font-family: var(--font-display); font-weight: 400; font-size: 28px; }
+.segmented { display: inline-flex; padding: 3px; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.06); }
+.seg {
+  min-height: 44px; padding-inline: 16px; border-radius: var(--r-pill); font-size: 14px; font-weight: 500; color: var(--text-3);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.seg[aria-checked="true"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.exercise-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.exercise-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding-block: 8px; border-block-start: 1px solid var(--line); }
+.exercise-row:first-child { border-block-start: 0; }
+.exercise-main { display: flex; flex-direction: column; min-width: 0; }
+.exercise-name { color: var(--text); font-weight: 500; }
+.exercise-dose { flex: none; color: var(--text-2); font-weight: 700; }
+.center { text-align: center; }
+.stat { display: flex; flex-direction: column; gap: 12px; }
+.stat-value { color: var(--text); font-weight: 800; }

@@ -123,6 +123,14 @@ describe('profile validation', () => {
     await assertFails(updateDoc(doc(alice(), path), { extra: 1 }));
   });
 
+  it('lets the owner update lastLocation to gym or home, and nothing else', async () => {
+    await seed(path, { name: 'Alice', sex: 'f', age: 30, createdAt: new Date() });
+    await assertSucceeds(updateDoc(doc(alice(), path), { lastLocation: 'home' }));
+    await assertSucceeds(updateDoc(doc(alice(), path), { lastLocation: 'gym' }));
+    await assertFails(updateDoc(doc(alice(), path), { lastLocation: 'moon' }));
+    await assertFails(updateDoc(doc(bob(), path), { lastLocation: 'home' }));
+  });
+
   it('lets the owner delete their profile', async () => {
     await seed(path, { name: 'Alice' });
     const { deleteDoc } = await import('firebase/firestore');

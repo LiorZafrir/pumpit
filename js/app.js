@@ -1,7 +1,7 @@
 // Hash router: one screen at a time.
 // Signed out -> login. Signed in without a finished profile -> onboarding. Otherwise the app.
 import { finishRedirect, watchAuth } from './auth.js';
-import { createProfile, getProfile } from './store.js';
+import { createProfile, getProfile, setLastLocation } from './store.js';
 import { buildProfile, isProfileComplete } from './logic/onboarding.js';
 import { h } from './ui/dom.js';
 import { icon } from './ui/icons.js';
@@ -79,6 +79,17 @@ async function submitOnboarding(answers) {
   route();
 }
 
+async function saveLocation(location) {
+  const previous = profile.lastLocation;
+  profile = { ...profile, lastLocation: location };
+  try {
+    await setLastLocation(user.uid, location);
+  } catch (err) {
+    profile = { ...profile, lastLocation: previous };
+    throw err;
+  }
+}
+
 async function route() {
   const token = ++renderToken;
 
@@ -104,7 +115,7 @@ async function route() {
   const mod = await SCREENS[name]();
   if (token !== renderToken) return; // a newer navigation won
 
-  const screen = mod.render({ user, profile, initialError: redirectError, onSubmit: submitOnboarding });
+  const screen = mod.render({ user, profile, initialError: redirectError, onSubmit: submitOnboarding, onLocationChange: saveLocation });
   redirectError = null;
 
   const showNav = name !== 'login' && name !== 'onboarding';
