@@ -28,6 +28,15 @@ h1, h2, h3 { color: var(--text); font-weight: 800; line-height: 1.2; }
 .small { font-size: 13px; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
+
+/* Fast repeated taps (e.g. +2.5 kg several times) must never trigger iOS double-tap zoom or text selection. */
+html, body { touch-action: manipulation; }
+button, a, [role="radio"], [role="switch"] {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 button { cursor: pointer; border: 0; background: none; padding: 0; }
 a { color: inherit; text-decoration: none; }
 svg { display: block; }
