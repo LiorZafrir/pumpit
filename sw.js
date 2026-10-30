@@ -1,5 +1,5 @@
 // Service worker: caches the app shell. Bump VERSION on every release so clients refresh.
-const VERSION = 'pumpit-v7';
+const VERSION = 'pumpit-v8';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -14,10 +14,14 @@ const SHELL = [
   './js/auth.js',
   './js/firebase.js',
   './js/firebase-config.js',
+  './js/store.js',
+  './js/logic/onboarding.js',
+  './js/logic/split.js',
   './js/ui/dom.js',
   './js/ui/icons.js',
   './js/ui/theme.js',
   './js/screens/login.js',
+  './js/screens/onboarding.js',
   './js/screens/home.js',
   './js/screens/progress.js',
   './js/screens/profile.js',

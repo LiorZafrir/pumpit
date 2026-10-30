@@ -130,6 +130,18 @@ describe('profile validation', () => {
   });
 });
 
+describe('onboarding output', () => {
+  it('the profile built by the app is accepted by the rules, with server timestamps', async () => {
+    const { buildProfile } = await import('../../js/logic/onboarding.js');
+    const { serverTimestamp } = await import('firebase/firestore');
+    const profile = buildProfile(
+      { sex: 'f', age: 28, heightCm: 165, weightKg: 58.5, goal: 'tone', level: 'beg', daysPerWeek: 3, injuries: ['knees', 'neck'] },
+      { name: 'Lior Zafrir' }
+    );
+    await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}`), { ...profile, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  });
+});
+
 describe('sets validation', () => {
   const path = `users/${ALICE}/sets/s1`;
 

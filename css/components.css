@@ -120,3 +120,79 @@
 /* Profile */
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* Onboarding */
+.onboarding { min-height: calc(100dvh - 40px); gap: 20px; }
+.ob-top { display: flex; align-items: center; gap: 12px; }
+.progress { flex: 1; height: 6px; border-radius: var(--r-pill); background: var(--line); overflow: hidden; }
+.progress > span {
+  display: block; height: 100%; border-radius: inherit; background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+  transition: width var(--t-fast) var(--ease);
+}
+.ob-head { display: flex; flex-direction: column; gap: 6px; padding-block-start: 4px; }
+.ob-title { font-family: var(--font-display); font-weight: 400; font-size: 32px; }
+.ob-body { display: flex; flex-direction: column; gap: 18px; }
+.ob-actions { margin-block-start: auto; display: flex; flex-direction: column; gap: 10px; padding-block: 12px 16px; }
+.step-in { animation: screen-in var(--t-fast) var(--ease) both; }
+.btn-text { min-height: 44px; color: var(--text-3); background: none; }
+.btn-primary[disabled] { box-shadow: none; }
+
+.choice-grid { display: grid; gap: 12px; }
+.choice-grid.two { grid-template-columns: 1fr 1fr; }
+.choice {
+  display: flex; flex-direction: column; gap: 2px; text-align: start;
+  min-height: 72px; padding: 16px 18px; justify-content: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg);
+  color: var(--text);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.choice-grid.two .choice { align-items: center; text-align: center; }
+.choice-title { font-weight: 700; font-size: 18px; }
+.choice-desc { font-size: 14px; color: var(--text-3); }
+.choice[aria-checked="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field label { font-size: 14px; color: var(--muted); }
+.input-wrap {
+  display: flex; align-items: center; gap: 10px; min-height: 60px; padding-inline: 18px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md);
+  transition: border-color var(--t-fast);
+}
+.input-wrap:focus-within { border-color: var(--accent); }
+.input-wrap input {
+  flex: 1; min-width: 0; padding-block: 12px; background: none; border: 0; outline: 0;
+  color: var(--text); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield; appearance: textfield;
+}
+.input-wrap input::-webkit-outer-spin-button, .input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.unit { color: var(--muted); }
+.field-error { display: flex; align-items: center; gap: 8px; min-height: 0; color: var(--danger); font-size: 14px; }
+.field-error:empty { display: none; }
+
+.day-pills { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.day-pill {
+  min-height: 60px; border-radius: var(--r-md); font-size: 24px; font-weight: 800; color: var(--text);
+  background: var(--card); border: 1px solid var(--line);
+  transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
+}
+.day-pill[aria-checked="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: 0 6px 20px var(--accent-glow); }
+.split-card { display: flex; flex-direction: column; gap: 10px; }
+.split-name { font-family: var(--font-display); font-size: 24px; color: var(--text); }
+.split-sessions { display: flex; flex-wrap: wrap; gap: 8px; }
+.session-pill {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding-inline: 12px;
+  border-radius: var(--r-pill); background: var(--card-strong); color: var(--text-2); font-size: 14px;
+}
+.session-pill .num { color: var(--accent); font-weight: 800; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  min-height: 48px; padding-inline: 20px; border-radius: var(--r-pill); font-size: 16px; color: var(--text);
+  background: var(--card); border: 1px solid var(--line);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }

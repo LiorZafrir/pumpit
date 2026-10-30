@@ -213,3 +213,10 @@ service cloud.firestore {
 - ה-service worker: network-first לקבצי האפליקציה, cache-first לגופנים ול-SDK. בכל גרסה מעלים את `VERSION` ב-`sw.js`, ומוסיפים קבצים חדשים לרשימת `SHELL`.
 - אירוח: Firebase Hosting, כתובת ההתקנה הקבועה `https://pumpit-e5229.firebaseapp.com/` (חייבת להיות זהה ל-`authDomain`, אחרת ההתחברות ב-iOS standalone נכשלת בגלל חסימת אחסון בין דומיינים). פריסה: `npx.cmd firebase deploy --only hosting --project pumpit-e5229`. GitHub Pages נשאר גיבוי בלבד.
 - iOS standalone (נמדד באייפון 15): עם `black-translucent` חלון האפליקציה היה קצר ב-59px מ-`screen.height` (innerHeight 793 מול 852), והבר התחתון נחתך. ניסיון להסיט אותו מתחת לקו נכשל. עברנו ל-`apple-mobile-web-app-status-bar-style: black`. אומת באייפון: הבר במקום. אם הבעיה חוזרת, לבדוק שוב `innerHeight` מול `screen.height`.
+
+## החלטות מימוש (שלב 2)
+
+- השאלון: `js/screens/onboarding.js` (UI בלבד), `js/logic/onboarding.js` (ולידציה ובניית הפרופיל, טהור) ו-`js/logic/split.js` (חלוקה מומלצת). בדיקות: `npm run test:logic` ו-`npm run test:rules`.
+- הנתב (`app.js`) טוען את הפרופיל אחרי ההתחברות. פרופיל חסר או לא מלא (`isProfileComplete`) מפנה ל-`#/onboarding`. שגיאת טעינה מציגה מסך "נסה שוב" ולא שאלון, כדי לא לדרוס פרופיל קיים.
+- הפרופיל נכתב פעם אחת בסיום (`createProfile` ב-`store.js`) עם `createdAt` ו-`updatedAt` מהשרת. ערכת הנושא נקבעת לפי המין (אישה ורוד, גבר ליים) ונשמרת ב-`theme`.
+- ימים בשבוע: ברירת מחדל 3. אזורים רגישים: מזהים באנגלית (`neck`, `shoulders`, `elbows`, `wrists`, `lowerBack`, `hips`, `knees`, `ankles`), התוויות בעברית ב-UI בלבד.
