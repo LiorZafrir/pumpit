@@ -1,8 +1,10 @@
 // Hash router: one screen at a time.
 // Signed out -> login. Signed in without a finished profile -> onboarding. Otherwise the app.
 import { finishRedirect, watchAuth } from './auth.js';
-import { createProfile, getProfile, setLastLocation } from './store.js';
+import { createProfile } from './store.js';
+import { actions, clearSession, loadAll, onSyncError, planNext, session } from './session.js';
 import { buildProfile, isProfileComplete } from './logic/onboarding.js';
+import { activeWorkout } from './logic/streak.js';
 import { h } from './ui/dom.js';
 import { icon } from './ui/icons.js';
 import { applyTheme } from './ui/theme.js';
@@ -11,6 +13,8 @@ const SCREENS = {
   login: () => import('./screens/login.js'),
   onboarding: () => import('./screens/onboarding.js'),
   home: () => import('./screens/home.js'),
+  workout: () => import('./screens/workout.js'),
+  summary: () => import('./screens/summary.js'),
   progress: () => import('./screens/progress.js'),
   profile: () => import('./screens/profile.js')
 };
@@ -20,6 +24,8 @@ const NAV = [
   { name: 'progress', label: 'התקדמות', icon: 'chart' },
   { name: 'profile', label: 'פרופיל', icon: 'user' }
 ];
+const FULL_SCREEN = new Set(['login', 'onboarding', 'workout', 'summary']);
+const TITLES = { login: 'PumpIt', onboarding: 'PumpIt · שאלון', workout: 'PumpIt · אימון', summary: 'PumpIt · סיכום' };
 
 const root = document.getElementById('app');
 const nav = document.getElementById('bottom-nav');
@@ -27,9 +33,10 @@ const nav = document.getElementById('bottom-nav');
 let user = null;
 let authReady = false;
 let redirectError = null;
-let profile = null;
 let profileState = 'idle'; // idle | loading | ready | error
 let renderToken = 0;
+
+const navigate = (name) => { location.hash = `#/${name}`; };
 
 function currentName() {
   const name = location.hash.replace(/^#\/?/, '');
@@ -73,21 +80,10 @@ function loadErrorScreen() {
 async function submitOnboarding(answers) {
   const data = buildProfile(answers, { name: user.displayName });
   await createProfile(user.uid, data); // throws on failure; the onboarding screen shows the error
-  profile = data;
+  actions.setProfile(data);
   applyTheme(data.theme);
   history.replaceState(null, '', '#/home');
   route();
-}
-
-async function saveLocation(location) {
-  const previous = profile.lastLocation;
-  profile = { ...profile, lastLocation: location };
-  try {
-    await setLastLocation(user.uid, location);
-  } catch (err) {
-    profile = { ...profile, lastLocation: previous };
-    throw err;
-  }
 }
 
 async function route() {
@@ -104,37 +100,55 @@ async function route() {
   } else if (profileState === 'error') {
     showFullScreen(loadErrorScreen());
     return;
-  } else if (!isProfileComplete(profile)) {
+  } else if (!isProfileComplete(session.profile)) {
     name = 'onboarding';
   } else {
     name = currentName();
     if (name === 'login' || name === 'onboarding') name = 'home';
+    try {
+      if (name === 'workout' && !(await actions.resume())) name = 'home';
+    } catch {
+      name = 'home';
+    }
+    if (name === 'summary' && !session.summary) name = 'home';
+    if (token !== renderToken) return;
   }
   if (user && location.hash !== `#/${name}`) history.replaceState(null, '', `#/${name}`);
 
   const mod = await SCREENS[name]();
   if (token !== renderToken) return; // a newer navigation won
 
-  const screen = mod.render({ user, profile, initialError: redirectError, onSubmit: submitOnboarding, onLocationChange: saveLocation });
+  const screen = mod.render({
+    user,
+    profile: session.profile,
+    workouts: session.workouts,
+    active: activeWorkout(session.workouts),
+    workout: session.active,
+    states: session.states,
+    summary: session.summary,
+    planNext,
+    actions,
+    navigate,
+    initialError: redirectError,
+    onSubmit: submitOnboarding
+  });
   redirectError = null;
 
-  const showNav = name !== 'login' && name !== 'onboarding';
+  const showNav = !FULL_SCREEN.has(name);
   root.classList.toggle('no-nav', !showNav);
   nav.hidden = !showNav;
   syncNav(name);
   root.replaceChildren(screen);
   window.scrollTo(0, 0);
-  const titles = { login: 'PumpIt', onboarding: 'PumpIt · שאלון' };
-  document.title = titles[name] || `PumpIt · ${NAV.find((n) => n.name === name).label}`;
+  document.title = TITLES[name] || `PumpIt · ${NAV.find((n) => n.name === name).label}`;
 }
 
 async function loadProfile(forUser) {
   profileState = 'loading';
   route();
   try {
-    const loaded = await getProfile(forUser.uid);
+    const loaded = await loadAll(forUser);
     if (user !== forUser) return; // signed out or switched account meanwhile
-    profile = loaded;
     profileState = 'ready';
     if (loaded && loaded.theme) applyTheme(loaded.theme);
   } catch {
@@ -148,9 +162,9 @@ function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   const hadController = Boolean(navigator.serviceWorker.controller);
   let reloaded = false;
-  // When a new version takes over, reload once so the page and cache match.
+  // When a new version takes over, reload once so the page and cache match. Never mid-workout.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadController || reloaded) return;
+    if (!hadController || reloaded || session.active) return;
     reloaded = true;
     location.reload();
   });
@@ -163,11 +177,18 @@ window.addEventListener('hashchange', route);
 route();
 registerServiceWorker();
 
+onSyncError(() => {
+  const banner = h('div', { class: 'error-msg sync-banner', role: 'alert' }, icon('alert', { size: 20 }), h('span', null, 'חלק מהנתונים לא נשמרו בשרת. בדוק את החיבור.'));
+  document.querySelector('.sync-banner')?.remove();
+  document.body.append(banner);
+  setTimeout(() => banner.remove(), 8000);
+});
+
 redirectError = await finishRedirect();
 watchAuth((u) => {
   user = u;
   authReady = true;
-  profile = null;
+  clearSession();
   if (u) {
     loadProfile(u);
   } else {

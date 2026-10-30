@@ -1,18 +1,12 @@
 import { h } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
-import { planWorkout, nextSession } from '../logic/planner.js';
-import { recommendedSplit } from '../logic/split.js';
+import { MUSCLE_LABELS, SESSION_TITLES } from '../ui/labels.js';
+import { exerciseById } from '../data/local-exercises.js';
+import { doneDates, doneThisWeek, weeklyStreak } from '../logic/streak.js';
 import { weekDays } from '../logic/week.js';
+import { unlockAudio } from '../services/feedback.js';
 
 const DAY_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
-const SESSION_TITLES = {
-  fullBody: 'אימון גוף מלא', upper: 'אימון פלג עליון', lower: 'אימון פלג תחתון',
-  push: 'אימון דחיפה', pull: 'אימון משיכה', legs: 'אימון רגליים'
-};
-const MUSCLE_LABELS = {
-  chest: 'חזה', back: 'גב', shoulders: 'כתפיים', rear: 'כתף אחורית', biceps: 'יד קדמית',
-  triceps: 'יד אחורית', quads: 'רגל קדמית', hamstrings: 'רגל אחורית', glutes: 'ישבן', calves: 'תאומים', core: 'בטן'
-};
 const LOCATIONS = [['gym', 'חדר כושר'], ['home', 'בית']];
 
 function dose(item) {
@@ -20,52 +14,85 @@ function dose(item) {
   return `${item.sets} × ${item.repsMin}-${item.repsMax}`;
 }
 
-/** @param {{ user: object, profile: object, onLocationChange: (loc: 'gym'|'home') => Promise<void> }} ctx */
-export function render({ user, profile, onLocationChange }) {
+/**
+ * @param {{
+ *   user: object, profile: object, workouts: object[], active: object|null,
+ *   planNext: (location: string) => { next: { type: string }, plan: { exercises: object[], plannedSets: number } },
+ *   actions: { setLocation: (l: string) => Promise<void>, start: (l: string) => object },
+ *   navigate: (name: string) => void
+ * }} ctx
+ */
+export function render({ user, profile, workouts, active, planNext, actions, navigate }) {
   let location = profile.lastLocation === 'home' ? 'home' : 'gym';
 
   const days = Math.min(6, Math.max(2, Number(profile.daysPerWeek) || 3));
-  const split = recommendedSplit(days);
-  const completedCount = 0; // becomes real in stage 4, when workouts are saved
-  const next = nextSession(split, completedCount);
-
+  const now = new Date();
+  const doneCount = doneThisWeek(workouts, now);
+  const streak = weeklyStreak(workouts, days, now);
   const firstName = (profile.name || user.displayName || '').trim().split(/\s+/)[0];
-  const doneThisWeek = 0;
 
   const week = h('div', { class: 'week', role: 'list', 'aria-label': 'השבוע' },
-    ...weekDays(new Date()).map((d) =>
-      h('div', { class: `day${d.isToday ? ' today' : ''}${d.done ? ' done' : ''}`, role: 'listitem', 'aria-current': d.isToday ? 'date' : null },
-        h('span', { class: 'day-letter' }, DAY_LETTERS[d.dayOfWeek]),
-        h('span', { class: 'day-num num' }, String(d.dayOfMonth)))));
+    ...weekDays(now, { done: doneDates(workouts) }).map((d) =>
+      h('div', {
+        class: `day${d.isToday ? ' today' : ''}${d.done ? ' done' : ''}`, role: 'listitem',
+        'aria-current': d.isToday ? 'date' : null, 'aria-label': d.done ? 'אימון הושלם' : null
+      },
+      h('span', { class: 'day-letter' }, DAY_LETTERS[d.dayOfWeek]),
+      h('span', { class: 'day-num num' }, String(d.dayOfMonth)))));
 
   const titleEl = h('h2', { class: 'workout-title' });
   const metaEl = h('p', { class: 'muted small num' });
   const listEl = h('ul', { class: 'exercise-list' });
   const errorSlot = h('div', { role: 'alert' });
+  const startBtn = h('button', { class: 'btn btn-primary', type: 'button' });
 
-  function drawPlan() {
-    const plan = planWorkout({
-      sessionType: next.type, location, goal: profile.goal, level: profile.level,
-      injuries: Array.isArray(profile.injuries) ? profile.injuries : [], variant: next.variant
-    });
-    titleEl.textContent = SESSION_TITLES[next.type];
-    const count = plan.exercises.length;
-    metaEl.textContent = count
-      ? `${count === 1 ? 'תרגיל אחד' : `${count} תרגילים`} · ${plan.plannedSets} סטים`
-      : 'לא נמצאו תרגילים מתאימים';
-    listEl.replaceChildren(...plan.exercises.map((item) =>
-      h('li', { class: 'exercise-row' },
+  function rowsFor(exercises) {
+    return exercises.map((item) => {
+      const ex = exerciseById(item.exerciseId) || { name: item.name || 'תרגיל', muscle: item.muscle };
+      return h('li', { class: 'exercise-row' },
         h('div', { class: 'exercise-main' },
-          h('span', { class: 'exercise-name' }, item.name),
-          h('span', { class: 'muted small' }, MUSCLE_LABELS[item.muscle])),
-        h('span', { class: 'exercise-dose num', dir: 'ltr' }, dose(item)))));
-    if (!plan.exercises.length) {
-      listEl.replaceChildren(h('li', { class: 'muted small' }, 'האזורים הרגישים שסימנת מוציאים את כל התרגילים. אפשר לעדכן אותם בפרופיל.'));
-    }
+          h('span', { class: 'exercise-name' }, ex.name),
+          h('span', { class: 'muted small' }, MUSCLE_LABELS[ex.muscle] || '')),
+        h('span', { class: 'exercise-dose num', dir: 'ltr' }, dose(item)));
+    });
   }
 
+  function meta(count, sets) {
+    return count ? `${count === 1 ? 'תרגיל אחד' : `${count} תרגילים`} · ${sets} סטים` : 'לא נמצאו תרגילים מתאימים';
+  }
+
+  function drawPlan() {
+    if (active) {
+      titleEl.textContent = active.title || 'אימון פתוח';
+      metaEl.textContent = `אימון בתהליך · ${meta(active.plan.length, active.plannedSets)}`;
+      listEl.replaceChildren(...rowsFor(active.plan));
+      startBtn.textContent = 'המשך אימון';
+      startBtn.disabled = false;
+      return;
+    }
+    const { next, plan } = planNext(location);
+    titleEl.textContent = SESSION_TITLES[next.type];
+    metaEl.textContent = meta(plan.exercises.length, plan.plannedSets);
+    listEl.replaceChildren(...(plan.exercises.length
+      ? rowsFor(plan.exercises)
+      : [h('li', { class: 'muted small' }, 'האזורים הרגישים שסימנת מוציאים את כל התרגילים. אפשר לעדכן אותם בפרופיל.')]));
+    startBtn.textContent = 'התחל אימון';
+    startBtn.disabled = plan.exercises.length === 0;
+  }
+
+  startBtn.addEventListener('click', () => {
+    unlockAudio();
+    errorSlot.replaceChildren();
+    try {
+      if (!active) actions.start(location);
+      navigate('workout');
+    } catch {
+      errorSlot.replaceChildren(h('div', { class: 'error-msg' }, icon('alert', { size: 20 }), h('span', null, 'לא הצלחנו להתחיל את האימון. נסה שוב.')));
+    }
+  });
+
   const segButtons = LOCATIONS.map(([value, label]) => {
-    const btn = h('button', { class: 'seg', type: 'button', role: 'radio', 'aria-checked': String(location === value) }, label);
+    const btn = h('button', { class: 'seg', type: 'button', role: 'radio', 'aria-checked': String(location === value), disabled: Boolean(active) }, label);
     btn.addEventListener('click', async () => {
       if (location === value) return;
       location = value;
@@ -73,15 +100,13 @@ export function render({ user, profile, onLocationChange }) {
       errorSlot.replaceChildren();
       drawPlan();
       try {
-        await onLocationChange(value);
+        await actions.setLocation(value);
       } catch {
         errorSlot.replaceChildren(h('div', { class: 'error-msg' }, icon('alert', { size: 20 }), h('span', null, 'לא הצלחנו לשמור את הבחירה. היא תישאר רק עד שתסגור את האפליקציה.')));
       }
     });
     return btn;
   });
-
-  const startBtn = h('button', { class: 'btn btn-primary', type: 'button', disabled: true }, 'התחל אימון');
 
   drawPlan();
 
@@ -90,21 +115,20 @@ export function render({ user, profile, onLocationChange }) {
       h('div', null,
         h('p', { class: 'muted' }, 'היי,'),
         h('h1', { class: 'screen-title' }, firstName || 'ברוך הבא')),
-      h('div', { class: 'streak', 'aria-label': 'רצף אימונים: 0' }, icon('bolt', { size: 20 }), h('span', { class: 'num' }, '0'))),
+      h('div', { class: 'streak', 'aria-label': `רצף של ${streak} שבועות` }, icon('bolt', { size: 20 }), h('span', { class: 'num' }, String(streak)))),
     week,
     h('div', { class: 'card strong workout-card' },
       h('div', { class: 'row' },
-        h('span', { class: 'muted small' }, 'האימון של היום'),
+        h('span', { class: 'muted small' }, active ? 'אימון פתוח' : 'האימון של היום'),
         h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'מיקום האימון' }, ...segButtons)),
       errorSlot,
       h('div', null, titleEl, metaEl),
       listEl,
-      startBtn,
-      h('p', { class: 'muted small center' }, 'זרימת האימון תיבנה בשלב הבא.')),
+      startBtn),
     h('div', { class: 'card stat' },
       h('div', { class: 'row' },
         h('span', null, 'אימונים השבוע'),
-        h('span', { class: 'num stat-value' }, `${doneThisWeek} / ${days}`)),
-      h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'אימונים השבוע', 'aria-valuemin': 0, 'aria-valuemax': days, 'aria-valuenow': doneThisWeek },
-        h('span', { style: `width:${(doneThisWeek / days) * 100}%` }))));
+        h('span', { class: 'num stat-value' }, `${doneCount} / ${days}`)),
+      h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'אימונים השבוע', 'aria-valuemin': 0, 'aria-valuemax': days, 'aria-valuenow': Math.min(doneCount, days) },
+        h('span', { style: `width:${Math.min(1, doneCount / days) * 100}%` }))));
 }

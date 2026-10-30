@@ -132,3 +132,20 @@ describe('nextSession', () => {
     assert.equal(nextSession(split, -1).index, 2);
   });
 });
+
+import { nextSessionAfter } from '../../js/logic/planner.js';
+
+describe('nextSessionAfter', () => {
+  it('starts at the first session when nothing was finished, then follows the last finished index', () => {
+    const split = recommendedSplit(4);
+    assert.equal(nextSessionAfter(split, null).index, 0);
+    assert.equal(nextSessionAfter(split, undefined).index, 0);
+    assert.deepEqual(nextSessionAfter(split, 0), { index: 1, type: 'lower', variant: 0 });
+    assert.deepEqual(nextSessionAfter(split, 1), { index: 2, type: 'upper', variant: 1 });
+    assert.deepEqual(nextSessionAfter(split, 3), { index: 0, type: 'upper', variant: 0 });
+  });
+
+  it('copes with a split that got shorter than the stored index', () => {
+    assert.equal(nextSessionAfter(recommendedSplit(2), 5).index, 0);
+  });
+});

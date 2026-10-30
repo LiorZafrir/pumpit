@@ -40,8 +40,11 @@ service cloud.firestore {
     }
 
     function validWorkout(d) {
-      return d.keys().hasOnly(['date','location','title','startedAt','endedAt','durationSec',
-               'plannedSets','completedSets','volumeKg','status'])
+      return d.keys().hasOnly(['date','location','title','sessionType','sessionIndex','plan',
+               'startedAt','endedAt','durationSec','plannedSets','completedSets','volumeKg','status'])
+        && (!('sessionType' in d) || d.sessionType in ['fullBody','upper','lower','push','pull','legs'])
+        && (!('sessionIndex' in d) || num(d.sessionIndex, 0, 5))
+        && (!('plan' in d) || (d.plan is list && d.plan.size() <= 12))
         && (!('date' in d) || str(d.date, 10))
         && (!('location' in d) || d.location in ['gym','home'])
         && (!('title' in d) || str(d.title, 80))
@@ -56,17 +59,19 @@ service cloud.firestore {
 
     function validSet(d) {
       return d.keys().hasOnly(['workoutId','exerciseId','setIndex','reps','weightKg',
-               'targetReps','targetWeightKg','drops','at'])
+               'targetReps','targetWeightKg','durationSec','drops','at'])
         && str(d.workoutId, 128) && str(d.exerciseId, 128)
         && num(d.setIndex, 0, 50) && num(d.reps, 0, 300) && num(d.weightKg, 0, 600)
         && (!('targetReps' in d) || num(d.targetReps, 0, 300))
         && (!('targetWeightKg' in d) || num(d.targetWeightKg, 0, 600))
+        && (!('durationSec' in d) || num(d.durationSec, 0, 3600))
         && (!('drops' in d) || (d.drops is list && d.drops.size() <= 6))
         && (!('at' in d) || when(d.at));
     }
 
     function validExerciseState(d) {
-      return d.keys().hasOnly(['workingWeightKg','targetReps','lastDoneAt','prWeightKg','prReps'])
+      return d.keys().hasOnly(['workingWeightKg','targetReps','lastDoneAt','prWeightKg','prReps','lastReps'])
+        && (!('lastReps' in d) || (d.lastReps is list && d.lastReps.size() <= 10))
         && (!('workingWeightKg' in d) || num(d.workingWeightKg, 0, 600))
         && (!('targetReps' in d) || num(d.targetReps, 0, 300))
         && (!('lastDoneAt' in d) || when(d.lastDoneAt))

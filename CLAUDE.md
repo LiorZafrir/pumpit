@@ -92,15 +92,16 @@ users/{uid}
   createdAt, updatedAt
 
 users/{uid}/workouts/{workoutId}
-  date, location, title, startedAt, endedAt, durationSec,
+  date, location, title, sessionType, sessionIndex, plan: [{ exerciseId, sets, repsMin?, repsMax?, durationSec? }],
+  startedAt, endedAt, durationSec,
   plannedSets, completedSets, volumeKg, status: 'active' | 'done'
 
 users/{uid}/sets/{setId}            ← אוסף שטוח, נוח לשאילתות התקדמות לפי תרגיל
   workoutId, exerciseId, setIndex, reps, weightKg,
-  targetReps, targetWeightKg, drops?: [{ reps, weightKg }], at
+  targetReps, targetWeightKg, durationSec? (תרגיל מבוסס זמן: reps ו-weightKg הם 0), drops?: [{ reps, weightKg }], at
 
 users/{uid}/exerciseState/{exerciseId}
-  workingWeightKg, targetReps, lastDoneAt, prWeightKg, prReps
+  workingWeightKg, targetReps, lastDoneAt, prWeightKg, prReps, lastReps: number[]
 
 users/{uid}/bodyWeight/{yyyy-mm-dd}
   kg, at
@@ -236,3 +237,17 @@ service cloud.firestore {
 - iOS בלבד: אין `navigator.vibrate`. מצב ה-status bar הוא `black` (ראה החלטות שלב 1). Android: `theme-color` ואייקון maskable כבר קיימים. `color-scheme: dark` מונע "מצב כהה כפוי" של Samsung Internet.
 - מסך נעול: בשתי הפלטפורמות הדף מושהה, והצליל/רטט בסוף מנוחה פועלים רק כשהאפליקציה בחזית. טיימר המנוחה נספר לפי timestamp.
 - לבדוק גם בגדלי מסך וב-User Agent של אנדרואיד. בדיקה על מכשיר סמסונג אמיתי נעשית ידנית, אם יש מכשיר זמין.
+
+## החלטות מימוש (שלב 4)
+
+- זרימת האימון: `screens/workout.js` (תרגיל, חלון רישום סט, מנוחה) ו-`screens/summary.js`. המצב בזיכרון ב-`session.js`, וכל הכתיבה ל-Firestore דרך `store.js`. המסכים מקבלים נתונים ו-`actions` כפרמטרים ולא מייבאים את `session.js`.
+- **אופליין:** Firestore עם `persistentLocalCache` (`firebase.js`). כתיבת סט לא מחכה לשרת (UI אופטימי). דחיית שרת מציגה באנר "חלק מהנתונים לא נשמרו".
+- **המשך אימון:** אימון נוצר ב-`status: 'active'` עם התוכנית (`plan`) בתוכו, וכל סט נשמר מיד (מזהה דטרמיניסטי `{workoutId}_{exerciseIndex}_{setIndex}`). בפתיחה, אימון פתוח מוצג בבית עם "המשך אימון" והמיקום נגזר מהסטים (`positionFrom`).
+- **סיום:** כתיבה אטומית (`writeBatch`) של עדכון האימון ושל `exerciseState`. אימון בלי סטים נמחק. סיכום האימון נשמר בזיכרון בלבד: רענון בזמן הסיכום חוזר לבית.
+- **עומס מתקדם (double progression):** כשכל הסטים המתוכננים הגיעו לראש טווח החזרות (`repsMax`) מוסיפים 2.5 ק״ג (פלג עליון) או 5 ק״ג (תחתון) וחוזרים ל-`repsMin`. אחרת אותו משקל ויעד `repsMax`. תרגיל משקל גוף לא מקבל תוספת משקל. תרגיל מבוסס זמן לא מתקדם (אותו יעד).
+- **שיא:** משקל גבוה מהשיא, או אותו משקל עם יותר חזרות (בתרגיל זמן: החזקה ארוכה יותר). בפעם הראשונה נרשם בסיס בלבד ואין "שיא".
+- **סדר האימונים:** האימון הבא הוא `sessionIndex` האחרון שהושלם + 1 לפי החלוקה הנוכחית. ה-`variant` נקבע לפי המופע בתוך המחזור, כך שתרגילים חוזרים בין שבוע לשבוע וניתן להתקדם בהם.
+- **רצף:** מספר שבועות רצופים (ראשון עד שבת) שבהם הושלמו לפחות `daysPerWeek` אימונים. שבוע נוכחי שטרם הושלם לא שובר את הרצף.
+- **iOS:** אין רטט ב-Safari (אנדרואיד כן). הצליל נפתח בלחיצה על "התחל אימון". Wake Lock לשמירת המסך דלוק, כשנתמך. טיימר המנוחה לפי timestamp, לכן נשאר מדויק גם אחרי נעילת מסך, אך צליל ורטט פועלים רק כשהאפליקציה בחזית.
+- כיוון טקסט: אחרי יחידה עברית בתוך מקטע LTR מוסיפים LRM (`‎`), אחרת "65 ק״ג × 9" מוצג מבולבל.
+- לא נכלל: החלפת תרגיל (שלב 5), סופר סט ודרופ סט (שלב 8), הגדרת זמן מנוחה (שלב 7, כרגע 90 שניות).

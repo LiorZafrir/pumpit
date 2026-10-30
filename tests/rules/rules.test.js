@@ -150,6 +150,69 @@ describe('onboarding output', () => {
   });
 });
 
+describe('stage 4 fields', () => {
+  it('workouts accept sessionType, sessionIndex and a plan, and reject bad values', async () => {
+    const p = `users/${ALICE}/workouts/w1`;
+    const plan = [{ exerciseId: 'local-plank', sets: 3, durationSec: 30 }];
+    await assertSucceeds(setDoc(doc(alice(), p), { sessionType: 'upper', sessionIndex: 2, plan, status: 'active', plannedSets: 3 }));
+    await assertFails(setDoc(doc(alice(), p), { sessionType: 'cardio' }));
+    await assertFails(setDoc(doc(alice(), p), { sessionIndex: 9 }));
+    await assertFails(setDoc(doc(alice(), p), { plan: Array.from({ length: 13 }, () => ({})) }));
+    await assertFails(setDoc(doc(alice(), p), { plan: 'not a list' }));
+  });
+
+  it('sets accept durationSec within range only', async () => {
+    const p = `users/${ALICE}/sets/s1`;
+    await assertSucceeds(setDoc(doc(alice(), p), { ...goodSet, reps: 0, weightKg: 0, durationSec: 45 }));
+    await assertFails(setDoc(doc(alice(), p), { ...goodSet, durationSec: -1 }));
+    await assertFails(setDoc(doc(alice(), p), { ...goodSet, durationSec: 9999 }));
+  });
+
+  it('exerciseState accepts lastReps up to 10 numbers', async () => {
+    const p = `users/${ALICE}/exerciseState/ex1`;
+    await assertSucceeds(setDoc(doc(alice(), p), { workingWeightKg: 40, lastReps: [8, 8, 7] }));
+    await assertFails(setDoc(doc(alice(), p), { lastReps: Array.from({ length: 11 }, () => 5) }));
+    await assertFails(setDoc(doc(alice(), p), { lastReps: 'x' }));
+  });
+});
+
+describe('documents built by the app are accepted', () => {
+  it('a full workout: start, sets (weighted and timed), finish with exercise states', async () => {
+    const { buildSetDoc, buildWorkoutDoc, finishPatch, setDocId } = await import('../../js/logic/workout-state.js');
+    const { evaluateExercise } = await import('../../js/logic/progression.js');
+    const plan = [
+      { exerciseId: 'local-bench-press', name: 'x', sets: 2, repsMin: 6, repsMax: 10 },
+      { exerciseId: 'local-plank', name: 'y', sets: 1, durationSec: 30 }
+    ];
+    const now = Date.now();
+    const workout = buildWorkoutDoc({ now, location: 'gym', title: 'אימון פלג עליון', sessionType: 'upper', sessionIndex: 0, plan });
+    await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/workouts/w1`), workout));
+
+    const sets = [
+      buildSetDoc({ workoutId: 'w1', planItem: plan[0], setIndex: 0, reps: 10, weightKg: 60, targetReps: 10, targetWeightKg: 60, now }),
+      buildSetDoc({ workoutId: 'w1', planItem: plan[0], setIndex: 1, reps: 10, weightKg: 60, targetReps: 10, targetWeightKg: 60, now }),
+      buildSetDoc({ workoutId: 'w1', planItem: plan[1], setIndex: 0, reps: 0, weightKg: 0, durationSec: 35, now })
+    ];
+    await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/sets/${setDocId('w1', 0, 0)}`), sets[0]));
+    await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/sets/${setDocId('w1', 0, 1)}`), sets[1]));
+    await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/sets/${setDocId('w1', 1, 0)}`), sets[2]));
+
+    await assertSucceeds(updateDoc(doc(alice(), `users/${ALICE}/workouts/w1`), finishPatch(workout, sets, now + 3000000)));
+    for (const item of plan) {
+      const own = sets.filter((s) => s.exerciseId === item.exerciseId);
+      const { newState } = evaluateExercise({ planItem: item, muscle: item.durationSec ? 'core' : 'chest', sets: own, prev: null, now });
+      await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/exerciseState/${item.exerciseId}`), newState));
+    }
+  });
+
+  it('every catalog exercise id is usable as a document id in exerciseState', async () => {
+    const { LOCAL_EXERCISES } = await import('../../js/data/local-exercises.js');
+    for (const e of LOCAL_EXERCISES.slice(0, 5)) {
+      await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/exerciseState/${e.id}`), { workingWeightKg: 20 }));
+    }
+  });
+});
+
 describe('sets validation', () => {
   const path = `users/${ALICE}/sets/s1`;
 

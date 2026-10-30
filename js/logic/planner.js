@@ -30,6 +30,11 @@ export function nextSession(split, completedCount = 0) {
   return { index, type, variant };
 }
 
+/** The session after the last finished one (`lastIndex` is its sessionIndex, or null/undefined for none). */
+export function nextSessionAfter(split, lastIndex) {
+  return nextSession(split, typeof lastIndex === 'number' ? lastIndex + 1 : 0);
+}
+
 /**
  * @param {object} p
  * @param {string} p.sessionType key of SLOTS
