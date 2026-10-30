@@ -229,3 +229,10 @@ service cloud.firestore {
 - `js/logic/week.js` (טהור): פס 7 ימים, השבוע מתחיל ביום ראשון, תאריכים לפי שעון מקומי.
 - `lastLocation` נשמר ב-`setLastLocation` (store.js). בכשל שמירה הבחירה נשארת במסך וההודעה מסבירה שהיא לא נשמרה.
 - כפתור "התחל אימון" מושבת עד שלב 4.
+
+## תאימות מכשירים
+
+- היעד: אייפון (Safari, PWA) **וגם** אנדרואיד (Chrome ו-Samsung Internet). אין קוד שתלוי בסוג מכשיר: מזהים יכולות בזמן ריצה (`'vibrate' in navigator`, `'wakeLock' in navigator`) ומשתמשים בהן רק כשקיימות.
+- iOS בלבד: אין `navigator.vibrate`. מצב ה-status bar הוא `black` (ראה החלטות שלב 1). Android: `theme-color` ואייקון maskable כבר קיימים. `color-scheme: dark` מונע "מצב כהה כפוי" של Samsung Internet.
+- מסך נעול: בשתי הפלטפורמות הדף מושהה, והצליל/רטט בסוף מנוחה פועלים רק כשהאפליקציה בחזית. טיימר המנוחה נספר לפי timestamp.
+- לבדוק גם בגדלי מסך וב-User Agent של אנדרואיד. בדיקה על מכשיר סמסונג אמיתי נעשית ידנית, אם יש מכשיר זמין.
