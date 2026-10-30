@@ -2,6 +2,27 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firestore.rules",
+      "package.json",
+      "package-lock.json",
+      "CLAUDE.md",
+      ".gitignore",
+      "**/.*",
+      "**/node_modules/**",
+      "tests/**",
+      "tools/**",
+      "js/config.example.js",
+      "*.log"
+    ],
+    "headers": [
+      { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "**/*.@(js|css|html|webmanifest)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+    ]
+  },
   "emulators": {
     "firestore": { "host": "127.0.0.1", "port": 8080 },
     "ui": { "enabled": false },

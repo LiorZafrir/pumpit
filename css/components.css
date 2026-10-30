@@ -105,8 +105,8 @@
 @keyframes pulse { 50% { transform: scale(1.5); opacity: 0.6; } }
 
 /* Login */
-.login { min-height: calc(100dvh - 48px); justify-content: space-between; padding-block: 24px; }
-.login-hero { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; margin-block-start: 12dvh; }
+.login { min-height: calc(100dvh - 48px); justify-content: center; gap: 56px; padding-block: 24px 14dvh; }
+.login-hero { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
 .logo-mark {
   width: 84px; height: 84px; border-radius: 26px; display: grid; place-items: center;
   background: var(--card-strong); border: 1px solid var(--line); color: var(--accent);
