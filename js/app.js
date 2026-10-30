@@ -92,17 +92,7 @@ function registerServiceWorker() {
   navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
 }
 
-// iOS home-screen apps can report a layout viewport shorter than the screen.
-// Measure the missing strip so fixed bottom elements can sit at the real screen edge.
-function syncViewportGap() {
-  const standalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-  const gap = standalone ? Math.round(screen.height - window.innerHeight) : 0;
-  document.documentElement.style.setProperty('--vp-gap', `${gap > 0 && gap < 100 ? gap : 0}px`);
-}
-
 applyTheme(document.documentElement.dataset.theme);
-syncViewportGap();
-window.addEventListener('resize', syncViewportGap);
 buildNav();
 window.addEventListener('hashchange', route);
 route();

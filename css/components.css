@@ -75,9 +75,8 @@
   position: fixed; z-index: 20;
   inset-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
   /* Sits just above the iOS home indicator instead of floating high. */
-  /* --vp-gap: iOS standalone shortens the layout viewport by the status-bar height,
-     leaving a blank strip under the page. app.js measures it. */
-  inset-block-end: calc(max(8px, env(safe-area-inset-bottom) - 10px) - var(--vp-gap, 0px));
+  /* Sits just above the iOS home indicator. */
+  inset-block-end: max(8px, calc(env(safe-area-inset-bottom) - 10px));
   max-width: 420px; margin-inline: auto;
   height: var(--nav-h);
   display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; gap: 4px;
