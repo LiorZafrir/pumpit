@@ -1,0 +1,16 @@
+{
+  "name": "pumpit",
+  "private": true,
+  "type": "module",
+  "description": "PumpIt PWA. Dev tooling only; the app itself has no build step.",
+  "scripts": {
+    "test:rules": "firebase emulators:exec --only firestore --project pumpit-e5229 \"node --test tests/rules/rules.test.js\"",
+    "serve": "node tools/serve.mjs",
+    "icons": "node tools/make-icons.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0",
+    "firebase-tools": "^13.35.1"
+  }
+}

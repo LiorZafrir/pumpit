@@ -1,0 +1,41 @@
+/* Design tokens. A theme only changes --accent (and --danger for the red theme). */
+:root {
+  --bg: #1B212C;
+  --bg-deep: #141921;
+  --sheet: #262D3A;
+  --card: rgba(255, 255, 255, 0.05);
+  --card-strong: rgba(255, 255, 255, 0.07);
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #EEF1F6;
+  --text-2: #D5DAE3;
+  --text-3: #AEB6C4;
+  --muted: #9AA3B2;
+  --on-accent: #12161D;
+
+  --accent: #C6F432;
+  --accent-glow: color-mix(in srgb, var(--accent) 38%, transparent);
+  --danger: #FF6B6B;
+
+  --r-xl: 28px;
+  --r-lg: 22px;
+  --r-md: 18px;
+  --r-sm: 14px;
+  --r-xs: 12px;
+  --r-pill: 999px;
+
+  --font-ui: "Heebo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Secular One", "Heebo", system-ui, sans-serif;
+
+  --gutter: 20px;
+  --nav-h: 64px;
+  --t-fast: 200ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+:root[data-theme="lime"]   { --accent: #C6F432; }
+:root[data-theme="blue"]   { --accent: #3DB8FF; }
+:root[data-theme="pink"]   { --accent: #FF4FA3; }
+:root[data-theme="orange"] { --accent: #FF8A2A; }
+:root[data-theme="red"]    { --accent: #FF4D4D; --danger: #FFB547; }
+:root[data-theme="yellow"] { --accent: #FFD43B; }
+:root[data-theme="purple"] { --accent: #A98BFF; }

@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function num(v, lo, hi) { return (v is int || v is float) && v >= lo && v <= hi; }
+    function str(v, max) { return v is string && v.size() <= max; }
+    function when(v) { return v is timestamp || v is int || v is float; }
+
+    function validSettings(s) {
+      return s is map
+        && s.keys().hasOnly(['split','restSec','homeGear','homeStyle','shortMode','superset','dropset'])
+        && (!('split' in s) || s.split in ['auto','flex','manual'])
+        && (!('restSec' in s) || num(s.restSec, 10, 600))
+        && (!('homeGear' in s) || (s.homeGear is list && s.homeGear.size() <= 30))
+        && (!('homeStyle' in s) || s.homeStyle in ['calisthenics','military','regular'])
+        && (!('shortMode' in s) || s.shortMode is bool)
+        && (!('superset' in s) || s.superset is bool)
+        && (!('dropset' in s) || s.dropset is bool);
+    }
+
+    function validProfile(d) {
+      return d.keys().hasOnly(['name','sex','age','heightCm','weightKg','goal','level',
+               'daysPerWeek','injuries','theme','lastLocation','settings','createdAt','updatedAt'])
+        && (!('name' in d) || str(d.name, 60))
+        && (!('sex' in d) || d.sex in ['m','f'])
+        && (!('age' in d) || num(d.age, 13, 100))
+        && (!('heightCm' in d) || num(d.heightCm, 100, 250))
+        && (!('weightKg' in d) || num(d.weightKg, 25, 350))
+        && (!('goal' in d) || d.goal in ['tone','loss','mass','fit'])
+        && (!('level' in d) || d.level in ['beg','mid','adv'])
+        && (!('daysPerWeek' in d) || num(d.daysPerWeek, 1, 7))
+        && (!('injuries' in d) || (d.injuries is list && d.injuries.size() <= 10))
+        && (!('theme' in d) || d.theme in ['lime','blue','pink','orange','red','yellow','purple'])
+        && (!('lastLocation' in d) || d.lastLocation in ['gym','home'])
+        && (!('settings' in d) || validSettings(d.settings))
+        && (!('createdAt' in d) || when(d.createdAt))
+        && (!('updatedAt' in d) || when(d.updatedAt));
+    }
+
+    function validWorkout(d) {
+      return d.keys().hasOnly(['date','location','title','startedAt','endedAt','durationSec',
+               'plannedSets','completedSets','volumeKg','status'])
+        && (!('date' in d) || str(d.date, 10))
+        && (!('location' in d) || d.location in ['gym','home'])
+        && (!('title' in d) || str(d.title, 80))
+        && (!('startedAt' in d) || when(d.startedAt))
+        && (!('endedAt' in d) || when(d.endedAt))
+        && (!('durationSec' in d) || num(d.durationSec, 0, 86400))
+        && (!('plannedSets' in d) || num(d.plannedSets, 0, 200))
+        && (!('completedSets' in d) || num(d.completedSets, 0, 200))
+        && (!('volumeKg' in d) || num(d.volumeKg, 0, 1000000))
+        && (!('status' in d) || d.status in ['active','done']);
+    }
+
+    function validSet(d) {
+      return d.keys().hasOnly(['workoutId','exerciseId','setIndex','reps','weightKg',
+               'targetReps','targetWeightKg','drops','at'])
+        && str(d.workoutId, 128) && str(d.exerciseId, 128)
+        && num(d.setIndex, 0, 50) && num(d.reps, 0, 300) && num(d.weightKg, 0, 600)
+        && (!('targetReps' in d) || num(d.targetReps, 0, 300))
+        && (!('targetWeightKg' in d) || num(d.targetWeightKg, 0, 600))
+        && (!('drops' in d) || (d.drops is list && d.drops.size() <= 6))
+        && (!('at' in d) || when(d.at));
+    }
+
+    function validExerciseState(d) {
+      return d.keys().hasOnly(['workingWeightKg','targetReps','lastDoneAt','prWeightKg','prReps'])
+        && (!('workingWeightKg' in d) || num(d.workingWeightKg, 0, 600))
+        && (!('targetReps' in d) || num(d.targetReps, 0, 300))
+        && (!('lastDoneAt' in d) || when(d.lastDoneAt))
+        && (!('prWeightKg' in d) || num(d.prWeightKg, 0, 600))
+        && (!('prReps' in d) || num(d.prReps, 0, 300));
+    }
+
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validProfile(request.resource.data);
+
+      match /sets/{setId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validSet(request.resource.data);
+      }
+      match /workouts/{workoutId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validWorkout(request.resource.data);
+      }
+      match /exerciseState/{exerciseId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validExerciseState(request.resource.data);
+      }
+      match /bodyWeight/{day} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['kg','at'])
+          && num(request.resource.data.kg, 25, 350)
+          && (!('at' in request.resource.data) || when(request.resource.data.at));
+      }
+    }
+
+    match /exercises/{exerciseId} {
+      allow read: if signedIn();
+      allow write: if false;   // the exercise library is updated only via the Console or an admin script
+    }
+  }
+}

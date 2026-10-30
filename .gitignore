@@ -1,0 +1,9 @@
+node_modules/
+js/config.local.js
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.log
+.DS_Store
+.claude/skills/
