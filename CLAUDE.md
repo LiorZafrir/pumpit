@@ -115,7 +115,7 @@ exercises/{exerciseId}              ← רק בשלב ExerciseDB (אחסון ע�
 - ולידציה בשרת על מה שנכתב: שדות מותרים בלבד, טיפוסים וטווחים הגיוניים.
 - המפתחות בקובץ ההגדרות של Firebase הם ציבוריים מטבעם. מה שמגן על הנתונים הוא החוקים, ולכן אסור להשאיר חוקים פתוחים, גם לא "זמנית".
 - לבדוק את החוקים עם Firebase Emulator לפני כל פריסה, כולל בדיקה שמשתמש אחד לא מצליח לקרוא נתונים של משתמש אחר.
-- להגביל את ה-API key ב-Google Cloud Console לדומיין `liorzafrir.github.io`, ולהוסיף אותו ל-Authorized domains ב-Auth.
+- להגביל את ה-API key ב-Google Cloud Console (Website restrictions) ל-`pumpit-e5229.firebaseapp.com/*`, ל-`pumpit-e5229.web.app/*` ול-`localhost:5173/*`. הדומיין `firebaseapp.com` כבר מורשה ב-Auth כברירת מחדל.
 - מפתח WorkoutX: בצד הלקוח הוא חשוף לכל מי שפותח את האפליקציה. בשלב האישי זה סיכון קטן ומקובל. לפני שמשתפים עם אחרים: להעביר את הקריאות ל-Cloud Function שמחזיקה את המפתח (דורש מסלול Blaze, שגם בו יש מכסה חינמית), או לעבור ל-ExerciseDB באחסון עצמי.
 - משקל, גיל ואזורים רגישים הם מידע אישי: לא לשמור יותר ממה שצריך, ולהוסיף בהגדרות "מחיקת חשבון" שמוחקת את כל הנתונים לפני שמשתפים עם חברים.
 - App Check (reCAPTCHA v3/Enterprise) — מומלץ להוסיף כשיש משתמשים נוספים.
@@ -212,4 +212,4 @@ service cloud.firestore {
 - שרת פיתוח: `npm run serve` (פורט 5173). אייקונים זמניים: `npm run icons`.
 - ה-service worker: network-first לקבצי האפליקציה, cache-first לגופנים ול-SDK. בכל גרסה מעלים את `VERSION` ב-`sw.js`, ומוסיפים קבצים חדשים לרשימת `SHELL`.
 - אירוח: Firebase Hosting, כתובת ההתקנה הקבועה `https://pumpit-e5229.firebaseapp.com/` (חייבת להיות זהה ל-`authDomain`, אחרת ההתחברות ב-iOS standalone נכשלת בגלל חסימת אחסון בין דומיינים). פריסה: `npx.cmd firebase deploy --only hosting --project pumpit-e5229`. GitHub Pages נשאר גיבוי בלבד.
-- iOS standalone (נמדד באייפון 15): עם `black-translucent` חלון האפליקציה היה קצר ב-59px מ-`screen.height` (innerHeight 793 מול 852), והבר התחתון נחתך. ניסיון להסיט אותו מתחת לקו נכשל. עברנו ל-`apple-mobile-web-app-status-bar-style: black`. אם הבעיה חוזרת, לבדוק שוב `innerHeight` מול `screen.height`.
+- iOS standalone (נמדד באייפון 15): עם `black-translucent` חלון האפליקציה היה קצר ב-59px מ-`screen.height` (innerHeight 793 מול 852), והבר התחתון נחתך. ניסיון להסיט אותו מתחת לקו נכשל. עברנו ל-`apple-mobile-web-app-status-bar-style: black`. אומת באייפון: הבר במקום. אם הבעיה חוזרת, לבדוק שוב `innerHeight` מול `screen.height`.
