@@ -211,3 +211,4 @@ service cloud.firestore {
   `JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=C:/pumpit-tmp -Djdk.net.unixdomain.tmpdir=C:/pumpit-tmp -Djava.net.preferIPv4Stack=true"` (התיקייה `C:\pumpit-tmp` צריכה להתקיים).
 - שרת פיתוח: `npm run serve` (פורט 5173). אייקונים זמניים: `npm run icons`.
 - ה-service worker: network-first לקבצי האפליקציה, cache-first לגופנים ול-SDK. בכל גרסה מעלים את `VERSION` ב-`sw.js`, ומוסיפים קבצים חדשים לרשימת `SHELL`.
+- אירוח: Firebase Hosting, כתובת ההתקנה הקבועה `https://pumpit-e5229.firebaseapp.com/` (חייבת להיות זהה ל-`authDomain`, אחרת ההתחברות ב-iOS standalone נכשלת בגלל חסימת אחסון בין דומיינים). פריסה: `npx.cmd firebase deploy --only hosting --project pumpit-e5229`. GitHub Pages נשאר גיבוי בלבד.
