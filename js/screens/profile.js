@@ -18,6 +18,27 @@ export function render({ user }) {
         h('span', { dir: 'ltr' }, user.email || '')
       )
     ),
-    signOutBtn
+    signOutBtn,
+    debugCard()
   );
+}
+
+// TEMPORARY: layout diagnostics for the iOS bottom-nav position. Remove once fixed.
+function debugCard() {
+  const probe = h('div', { style: 'position:fixed;visibility:hidden;padding-bottom:env(safe-area-inset-bottom);padding-top:env(safe-area-inset-top)' });
+  document.body.append(probe);
+  const cs = getComputedStyle(probe);
+  const nav = document.getElementById('bottom-nav').getBoundingClientRect();
+  const vv = window.visualViewport;
+  const lines = [
+    `innerHeight ${window.innerHeight}`,
+    `screen.height ${screen.height}`,
+    `visualViewport.height ${vv ? Math.round(vv.height) : 'n/a'}`,
+    `clientHeight ${document.documentElement.clientHeight}`,
+    `safe top/bottom ${cs.paddingTop} / ${cs.paddingBottom}`,
+    `nav bottom ${Math.round(nav.bottom)}`,
+    `standalone ${window.navigator.standalone}`
+  ];
+  probe.remove();
+  return h('div', { class: 'card small num', dir: 'ltr' }, ...lines.map((l) => h('div', null, l)));
 }
