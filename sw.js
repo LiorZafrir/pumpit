@@ -1,5 +1,5 @@
 // Service worker: caches the app shell. Bump VERSION on every release so clients refresh.
-const VERSION = 'pumpit-v11';
+const VERSION = 'pumpit-v12';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -27,6 +27,7 @@ const SHELL = [
   './js/ui/dom.js',
   './js/ui/icons.js',
   './js/ui/theme.js',
+  './js/ui/touch.js',
   './js/ui/labels.js',
   './js/ui/sheet.js',
   './js/ui/ring.js',

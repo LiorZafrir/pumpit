@@ -8,6 +8,7 @@ import { activeWorkout } from './logic/streak.js';
 import { h } from './ui/dom.js';
 import { icon } from './ui/icons.js';
 import { applyTheme } from './ui/theme.js';
+import { preventDoubleTapZoom } from './ui/touch.js';
 
 const SCREENS = {
   login: () => import('./screens/login.js'),
@@ -171,6 +172,7 @@ function registerServiceWorker() {
   navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
 }
 
+preventDoubleTapZoom();
 applyTheme(document.documentElement.dataset.theme);
 buildNav();
 window.addEventListener('hashchange', route);
