@@ -9,3 +9,7 @@ export const firebaseConfig = {
   messagingSenderId: "112120417735",
   appId: "1:112120417735:web:e734161541a6cbf920dde2"
 };
+
+// App Check (reCAPTCHA v3) site key. Public by design. Leave empty to keep App Check off.
+// Setup steps are in CLAUDE.md ("App Check").
+export const appCheckSiteKey = "";

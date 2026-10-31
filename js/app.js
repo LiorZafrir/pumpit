@@ -82,6 +82,7 @@ async function submitOnboarding(answers) {
   const data = buildProfile(answers, { name: user.displayName });
   await createProfile(user.uid, data); // throws on failure; the onboarding screen shows the error
   actions.setProfile(data);
+  actions.logBodyWeight(data.weightKg); // the first point of the body-weight chart (not awaited, works offline)
   applyTheme(data.theme);
   history.replaceState(null, '', '#/home');
   route();

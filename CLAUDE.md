@@ -290,3 +290,14 @@ service cloud.firestore {
 - **דרופ סט:** כשהמתג פועל, בחלון רישום סט מופיע "הוסף דרופ" (עד 6). כל דרופ מתחיל ב-80% מהמשקל הקודם (מעוגל ל-2.5). נשמר ב-`drops: [{reps, weightKg}]` בסט, והנפח כולל אותם. התקדמות, שיאים וגרפים מתבססים על הסט הראשי (הכבד) בלבד.
 - **חוקים:** `workouts.shortMin` ∈ {20,30,45}, ו-`sets.drops` מאומת איבר-איבר (רק `reps`, `weightKg` בטווח). **צריך לפרוס את החוקים לפני האתר** (`npx firebase deploy --only firestore:rules`), אחרת אימון קצר יידחה בשרת.
 - זמן המנוחה באימון קצר נגזר מ-`workout.shortMin` ולכן נשמר גם בהמשך אימון.
+
+## הקשחה ושיתוף (אחרי שלב 8)
+
+- **משקל גוף ראשון:** בסיום השאלון נרשם משקל הגוף מהשאלון כנקודה הראשונה ב-`bodyWeight`.
+- **CSP:** תג `<meta http-equiv="Content-Security-Policy">` ב-`index.html` מתיר רק קבצים שלנו ואת דומייני Google/Firebase (SDK מ-gstatic, `apis.google.com` להתחברות, `*.googleapis.com` ל-Firestore ול-Auth, `*.firebaseapp.com` ל-iframe של ההתחברות, גופנים של Google, reCAPTCHA). סגנונות inline מותרים כי הקוד משתמש ב-`style`. כותרות ב-`firebase.json`: `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`. **אין COOP**, כי הוא שובר `signInWithPopup`. הותקן ונבדק מקומית שהאפליקציה נטענת והמקורות המותרים נטענים והזרים נחסמים. **התחברות מול Google ו-Firestore תחת ה-CSP לא נבדקו על ידי אוטומציה** (דורשים התחברות). הוספת ספק חיצוני חדש מחייבת עדכון ה-CSP.
+- **App Check:** הקוד ב-`js/firebase.js` כבוי כל עוד `appCheckSiteKey` ב-`js/firebase-config.js` ריק, וכשל בהפעלה לא עוצר את האפליקציה. להפעלה:
+  1. https://www.google.com/recaptcha/admin: ליצור אתר מסוג reCAPTCHA v3, דומיינים `pumpit-e5229.firebaseapp.com` ו-`pumpit-e5229.web.app`. מקבלים Site key ו-Secret key.
+  2. Firebase Console › App Check › Apps › "PumpIt Web" › reCAPTCHA › להדביק את ה-Secret key ולשמור.
+  3. להדביק את ה-Site key ב-`appCheckSiteKey`, לפרוס, ולפתוח את האפליקציה.
+  4. App Check › APIs › Cloud Firestore: לבדוק ב-Metrics שרוב הבקשות "Verified". **רק אז** ללחוץ Enforce (וגם על Authentication אם רוצים). Enforce לפני שהמדדים תקינים ינעל את כולם בחוץ.
+  5. פיתוח מקומי: ב-localhost נוצר debug token שמודפס בקונסול. לרשום אותו ב-App Check › Apps › Manage debug tokens.
