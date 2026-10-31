@@ -110,16 +110,28 @@ export function render({ workout, states, actions, navigate }) {
       }), 'btn-ghost btn-danger-text')));
   }
 
+  const lastSetOf = (exerciseId) => workout.sets.filter((s) => s.exerciseId === exerciseId).at(-1) || null;
+
+  function shownWeight(exerciseId, state) {
+    const prev = lastSetOf(exerciseId);
+    const kgValue = prev ? prev.weightKg || 0 : state && typeof state.workingWeightKg === 'number' ? state.workingWeightKg : null;
+    return kgValue == null ? '—' : `${fmt(kgValue)} ק״ג`;
+  }
+
   function openLogSheet(pos) {
     const item = plan[pos.exerciseIndex];
     const exercise = exerciseById(item.exerciseId);
     const state = states[item.exerciseId];
     const timed = item.durationSec != null;
     const lastReps = state && Array.isArray(state.lastReps) ? state.lastReps : [];
-    const startWeight = state && typeof state.workingWeightKg === 'number' ? state.workingWeightKg : 0;
-    const startReps = timed
-      ? (lastReps[pos.setIndex] ?? lastReps[lastReps.length - 1] ?? item.durationSec)
-      : (lastReps[pos.setIndex] ?? lastReps[lastReps.length - 1] ?? item.repsMin);
+    // Within a workout, the next set starts from the set just done. Otherwise from the last workout.
+    const prevSet = lastSetOf(item.exerciseId);
+    const startWeight = prevSet ? (prevSet.weightKg || 0) : state && typeof state.workingWeightKg === 'number' ? state.workingWeightKg : 0;
+    const startReps = prevSet
+      ? (timed ? prevSet.durationSec ?? item.durationSec : prevSet.reps)
+      : timed
+        ? (lastReps[pos.setIndex] ?? lastReps[lastReps.length - 1] ?? item.durationSec)
+        : (lastReps[pos.setIndex] ?? lastReps[lastReps.length - 1] ?? item.repsMin);
 
     const sheet = openSheet({ title: `${exercise ? exercise.name : 'תרגיל'} · סט ${pos.setIndex + 1}/${item.sets}` });
     const weight = timed ? null : stepper({ label: 'משקל', value: startWeight, step: WEIGHT_STEP, min: 0, max: 600, unit: 'ק״ג' });
@@ -187,7 +199,7 @@ export function render({ workout, states, actions, navigate }) {
         h('div', { class: 'tile' }, h('span', { class: 'muted small' }, 'יעד'),
           h('span', { class: 'tile-value num', dir: 'ltr' }, timed ? `${item.durationSec} שנ׳` : `${item.repsMin}-${item.repsMax}`)),
         timed ? null : h('div', { class: 'tile' }, h('span', { class: 'muted small' }, 'משקל'),
-          h('span', { class: 'tile-value num', dir: 'ltr' }, state && typeof state.workingWeightKg === 'number' ? `${fmt(state.workingWeightKg)} ק״ג` : '—'))),
+          h('span', { class: 'tile-value num', dir: 'ltr' }, shownWeight(item.exerciseId, state)))),
       lastLine,
       guideBlock(item.exerciseId),
       h('div', { class: 'ob-actions' }, done, swapButton(pos.exerciseIndex)));

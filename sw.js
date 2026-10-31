@@ -1,5 +1,5 @@
 // Service worker: caches the app shell. Bump VERSION on every release so clients refresh.
-const VERSION = 'pumpit-v15';
+const VERSION = 'pumpit-v16';
 const MEDIA_CACHE = 'pumpit-media-v1';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
