@@ -215,15 +215,17 @@ export function render({ workout, states, actions, navigate }) {
     const sheet = openSheet({ title: 'החלפת תרגיל' });
     const list = h('div', { class: 'swap-list' });
     for (const alt of actions.alternatives(exerciseIndex)) {
-      const row = h('button', { class: 'btn btn-ghost menu-option', type: 'button' }, h('span', null, alt.name),
-        h('span', { class: 'small muted' }, alt.location.length === 2 ? 'חדר כושר או בית' : alt.location[0] === 'gym' ? 'חדר כושר' : 'בית'));
+      const where = alt.location.length === 2 ? 'חדר כושר או בית' : alt.location[0] === 'gym' ? 'חדר כושר' : 'בית';
+      const row = h('button', { class: 'swap-row', type: 'button' },
+        h('span', { class: 'swap-text' }, h('span', { class: 'swap-name' }, alt.name), h('span', { class: 'small muted' }, where)),
+        h('span', { class: 'swap-pill' }, icon('swap', { size: 18 }), 'החלף'));
       row.addEventListener('click', () => {
         sheet.close();
         if (actions.swapExercise(exerciseIndex, alt.id)) showExercise();
       });
       list.append(row);
     }
-    sheet.body.append(h('p', { class: 'sheet-text' }, 'אותו שריר, מתאים לציוד, לרמה ולאזורים הרגישים שלך.'), list);
+    sheet.body.append(h('p', { class: 'sheet-text' }, 'בחר תרגיל חלופי לאותו שריר, שמתאים למיקום, לרמה ולאזורים הרגישים שלך.'), list);
   }
 
   // ---- rest view ----

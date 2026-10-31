@@ -337,3 +337,8 @@
 .guide-body ol { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; }
 .guide-tip { color: var(--text-3); font-size: 14px; }
 .swap-list { display: flex; flex-direction: column; gap: 8px; }
+
+.swap-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 10px 14px; border-radius: var(--r-md); background: var(--card-strong); border: 1px solid var(--line); color: var(--text); text-align: start; }
+.swap-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.swap-name { font-weight: 500; }
+.swap-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding-inline: 16px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 15px; flex-shrink: 0; }
