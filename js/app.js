@@ -1,8 +1,8 @@
 // Hash router: one screen at a time.
 // Signed out -> login. Signed in without a finished profile -> onboarding. Otherwise the app.
-import { finishRedirect, watchAuth } from './auth.js';
+import { clearDeletePending, consumeDeletePending, finishRedirect, watchAuth } from './auth.js';
 import { createProfile } from './store.js';
-import { actions, clearSession, loadAll, onSyncError, planNext, session } from './session.js';
+import { actions, clearSession, finishDeletion, loadAll, onSyncError, planNext, session } from './session.js';
 import { buildProfile, isProfileComplete } from './logic/onboarding.js';
 import { activeWorkout } from './logic/streak.js';
 import { h } from './ui/dom.js';
@@ -186,12 +186,27 @@ onSyncError(() => {
   setTimeout(() => banner.remove(), 8000);
 });
 
+// Coming back from Google's confirmation for "delete my account": finish the deletion. If it fails, the
+// profile is still there (it is deleted last), so the user lands in the app and can try again.
+async function resumeDeletion(u) {
+  try {
+    await finishDeletion(u);
+  } catch {
+    if (user === u) loadProfile(u);
+  }
+}
+
 redirectError = await finishRedirect();
+if (redirectError) clearDeletePending();
 watchAuth((u) => {
   user = u;
   authReady = true;
   clearSession();
-  if (u) {
+  if (u && consumeDeletePending()) {
+    profileState = 'idle';
+    route();
+    resumeDeletion(u);
+  } else if (u) {
     loadProfile(u);
   } else {
     profileState = 'idle';

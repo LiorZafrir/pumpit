@@ -1,4 +1,5 @@
 // Run with: npm run test:rules (starts the Firestore emulator, needs Java).
+import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
@@ -270,5 +271,40 @@ describe('exercises collection', () => {
     await assertSucceeds(getDoc(doc(alice(), 'exercises/ex1')));
     await assertFails(setDoc(doc(alice(), 'exercises/ex2'), { name: 'Hack' }));
     await assertFails(updateDoc(doc(alice(), 'exercises/ex1'), { name: 'Hack' }));
+  });
+});
+
+describe('settings screen and account deletion', () => {
+  const profilePath = `users/${ALICE}`;
+
+  it('details and nested settings updates built by the app are accepted', async () => {
+    const { detailsPatch, applyPatch } = await import('../../js/logic/settings.js');
+    const { buildProfile } = await import('../../js/logic/onboarding.js');
+    const base = buildProfile({ sex: 'f', age: 30, heightCm: 168, weightKg: 61, goal: 'tone', level: 'mid', daysPerWeek: 4, injuries: ['knees'] }, { name: 'דנה' });
+    await seed(profilePath, base);
+    const details = detailsPatch({ ...base, name: ' דנה ', weightKg: 60.5 });
+    await assertSucceeds(updateDoc(doc(alice(), profilePath), details));
+    await assertSucceeds(updateDoc(doc(alice(), profilePath), { 'settings.restSec': 120, 'settings.homeGear': ['dumbbells', 'pullupBar'], 'settings.homeStyle': 'military' }));
+    await assertSucceeds(updateDoc(doc(alice(), profilePath), { 'settings.superset': true, theme: 'purple' }));
+    const snap = await getDoc(doc(alice(), profilePath));
+    assert.equal(snap.data().settings.restSec, 120);
+    assert.equal(snap.data().settings.superset, true);
+    assert.deepEqual(applyPatch(base, { 'settings.restSec': 120 }).settings, { restSec: 120 });
+  });
+
+  it('invalid nested settings and themes are rejected', async () => {
+    await seed(profilePath, { age: 30 });
+    await assertFails(updateDoc(doc(alice(), profilePath), { 'settings.restSec': 5 }));
+    await assertFails(updateDoc(doc(alice(), profilePath), { 'settings.homeStyle': 'chaos' }));
+    await assertFails(updateDoc(doc(alice(), profilePath), { 'settings.evil': 1 }));
+    await assertFails(updateDoc(doc(alice(), profilePath), { theme: 'neon' }));
+  });
+
+  it('the owner can delete every document the account holds, and nobody else can', async () => {
+    const { deleteDoc } = await import('firebase/firestore');
+    const paths = [profilePath, `${profilePath}/sets/s1`, `${profilePath}/workouts/w1`, `${profilePath}/exerciseState/e1`, `${profilePath}/bodyWeight/2026-01-01`];
+    for (const p of paths) await seed(p, { age: 30 });
+    for (const p of paths) await assertFails(deleteDoc(doc(bob(), p)));
+    for (const p of paths) await assertSucceeds(deleteDoc(doc(alice(), p)));
   });
 });

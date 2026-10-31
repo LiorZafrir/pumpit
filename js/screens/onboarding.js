@@ -1,5 +1,6 @@
 import { h } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
+import { GOAL_LABELS, INJURY_LABELS, LEVEL_LABELS, SEX_LABELS } from '../ui/labels.js';
 import {
   GOALS, INJURY_AREAS, LEVELS, RANGES, STEP_COUNT, emptyAnswers, inRange, stepIsValid
 } from '../logic/onboarding.js';
@@ -14,22 +15,6 @@ const TITLES = [
   ['יש אזורים רגישים?', 'נמנע מתרגילים שמעמיסים עליהם. אפשר לדלג.']
 ];
 
-const SEX_LABELS = { m: 'גבר', f: 'אישה' };
-const GOAL_LABELS = {
-  tone: ['חיטוב', 'הגדרה שרירית ושריפת שומן'],
-  loss: ['הרזיה', 'ירידה במשקל בצורה מבוקרת'],
-  mass: ['מסה', 'בניית שריר וכוח'],
-  fit: ['כושר כללי', 'בריאות, כוח וסיבולת']
-};
-const LEVEL_LABELS = {
-  beg: ['מתחיל', 'עד שנה של אימונים'],
-  mid: ['בינוני', 'בין שנה לשלוש שנים'],
-  adv: ['מתקדם', 'יותר משלוש שנים']
-};
-const INJURY_LABELS = {
-  neck: 'צוואר', shoulders: 'כתפיים', elbows: 'מרפקים', wrists: 'פרקי ידיים',
-  lowerBack: 'גב תחתון', hips: 'ירכיים', knees: 'ברכיים', ankles: 'קרסוליים'
-};
 const SPLIT_LABELS = { fullBody: 'גוף מלא', upperLower: 'עליון / תחתון', pushPullLegs: 'דחיפה / משיכה / רגליים' };
 const SESSION_LABELS = { fullBody: 'גוף מלא', upper: 'עליון', lower: 'תחתון', push: 'דחיפה', pull: 'משיכה', legs: 'רגליים' };
 const FIELD_LABELS = { age: 'גיל', heightCm: 'גובה', weightKg: 'משקל' };

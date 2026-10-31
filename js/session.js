@@ -1,9 +1,11 @@
 // In-memory state for the signed-in user, plus the actions that change it and persist through store.js.
 // Screens never import this: app.js hands them plain data and an `actions` object, so they can be tested without Firebase.
 import * as store from './store.js';
+import { deleteCurrentUser, reauthenticate } from './auth.js';
 import { exerciseById } from './data/local-exercises.js';
 import { nextSessionAfter, planWorkout } from './logic/planner.js';
 import { periodStart } from './logic/progress.js';
+import { applyPatch, settingsOf } from './logic/settings.js';
 import { toDateKey } from './logic/week.js';
 import { evaluateExercise } from './logic/progression.js';
 import { recommendedSplit } from './logic/split.js';
@@ -46,6 +48,13 @@ export function clearSession() {
   Object.assign(session, { user: null, profile: null, workouts: [], states: {}, active: null, summary: null });
 }
 
+/** Wipes the user's data and then the sign-in itself. Safe to repeat if it stops half way. */
+export async function finishDeletion(user) {
+  await store.deleteAllUserData(user.uid);
+  await deleteCurrentUser();
+  clearSession();
+}
+
 export async function loadAll(user) {
   const [profile, workouts, states] = await Promise.all([
     store.getProfile(user.uid),
@@ -68,10 +77,12 @@ export function splitFor(profile) {
 /** The session that comes next and its exercises, for a given location. */
 export function planNext(location) {
   const { profile } = session;
+  const settings = settingsOf(profile);
   const next = nextSessionAfter(splitFor(profile), lastFinished(session.workouts)?.sessionIndex);
   const plan = planWorkout({
     sessionType: next.type, location, goal: profile.goal, level: profile.level,
-    injuries: Array.isArray(profile.injuries) ? profile.injuries : [], variant: next.variant
+    injuries: Array.isArray(profile.injuries) ? profile.injuries : [], variant: next.variant,
+    gear: settings.homeGear, style: settings.homeStyle
   });
   return { next, plan };
 }
@@ -129,6 +140,23 @@ export const actions = {
     return data;
   },
 
+  /**
+   * Updates profile fields (nested ones as "settings.key"). The screen sees the change at once; a server
+   * rejection raises the sync banner, like set writes do.
+   */
+  updateProfile(patch) {
+    session.profile = applyPatch(session.profile, patch);
+    track(store.updateProfile(session.user.uid, patch));
+  },
+
+  /** Confirms the sign-in with Google, then deletes all data and the account. Returns 'redirect' if the page is leaving. */
+  async deleteAccount() {
+    const status = await reauthenticate();
+    if (status === 'redirect') return status;
+    await finishDeletion(session.user);
+    return 'done';
+  },
+
   /** Sets inside a period for the progress screen (cached until a set changes). */
   progressSets(period) {
     if (!progressCache.has(period)) {
@@ -157,7 +185,8 @@ export const actions = {
     if (!a || hasSets(a, exerciseIndex)) return [];
     const { profile } = session;
     return alternativesFor(a.doc.plan, exerciseIndex, {
-      location: a.doc.location, level: profile.level, injuries: Array.isArray(profile.injuries) ? profile.injuries : []
+      location: a.doc.location, level: profile.level, injuries: Array.isArray(profile.injuries) ? profile.injuries : [],
+      gear: settingsOf(profile).homeGear, style: settingsOf(profile).homeStyle
     });
   },
 

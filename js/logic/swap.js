@@ -1,7 +1,7 @@
 // Exercise swap: a replacement for the same muscle when a machine is taken or something hurts. Pure.
 // Plan items in a workout document hold only the exercise id, so muscles are looked up in the catalog.
 import { LOCAL_EXERCISES } from '../data/local-exercises.js';
-import { prescribeExercise } from './planner.js';
+import { availableAt, prescribeExercise } from './planner.js';
 import { toStoredPlanItem } from './workout-state.js';
 
 const LEVEL_RANK = { beg: 0, mid: 1, adv: 2 };
@@ -10,7 +10,7 @@ const LEVEL_RANK = { beg: 0, mid: 1, adv: 2 };
  * Exercises that can replace plan item `index`: same muscle, same location, safe for the injuries,
  * not above the user's level and not already in today's workout. Catalog order is kept.
  */
-export function alternativesFor(plan, index, { location, level, injuries = [] }, catalog = LOCAL_EXERCISES) {
+export function alternativesFor(plan, index, { location, level, injuries = [], gear = [], style = 'regular' }, catalog = LOCAL_EXERCISES) {
   const item = plan[index];
   const current = item && catalog.find((e) => e.id === item.exerciseId);
   if (!current) return [];
@@ -19,7 +19,7 @@ export function alternativesFor(plan, index, { location, level, injuries = [] },
   return catalog.filter((e) =>
     e.muscle === current.muscle
     && !inPlan.has(e.id)
-    && e.location.includes(location)
+    && availableAt(e, { location, gear, style })
     && LEVEL_RANK[e.level] <= rank
     && !e.loads.some((area) => injuries.includes(area)));
 }

@@ -2,7 +2,6 @@
 import { toDateKey } from './week.js';
 import { workoutVolume } from './progression.js';
 
-export const DEFAULT_REST_SEC = 90;
 
 const without = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && v !== null));
 

@@ -7,7 +7,8 @@ import { MUSCLE_LABELS, formatClock } from '../ui/labels.js';
 import { exerciseMedia } from '../ui/exercise-media.js';
 import { exerciseById } from '../data/local-exercises.js';
 import { guideFor } from '../data/exercise-guides.js';
-import { DEFAULT_REST_SEC, nextUp, positionFrom, progressFraction } from '../logic/workout-state.js';
+import { nextUp, positionFrom, progressFraction } from '../logic/workout-state.js';
+import { settingsOf } from '../logic/settings.js';
 import { beep, keepAwake, releaseAwake, unlockAudio, vibrate } from '../services/feedback.js';
 
 const WEIGHT_STEP = 2.5;
@@ -53,7 +54,8 @@ function stepper({ label, value, step, min, max, unit }) {
  *   navigate: (name: string) => void
  * }} ctx
  */
-export function render({ workout, states, actions, navigate }) {
+export function render({ workout, states, actions, navigate, profile }) {
+  const restSec = settingsOf(profile).restSec;
   const plan = workout.doc.plan;
   const root = h('section', { class: 'screen workout' });
   let restTimer = null;
@@ -244,12 +246,12 @@ export function render({ workout, states, actions, navigate }) {
 
   function showRest(justDone) {
     stopRest();
-    let totalMs = DEFAULT_REST_SEC * 1000;
+    let totalMs = restSec * 1000;
     let endAt = Date.now() + totalMs;
     let alerted = false;
 
     const ring = createRing({ size: 260, stroke: 14 });
-    const clock = h('div', { class: 'rest-clock num', role: 'timer', 'aria-live': 'off' }, formatClock(DEFAULT_REST_SEC));
+    const clock = h('div', { class: 'rest-clock num', role: 'timer', 'aria-live': 'off' }, formatClock(restSec));
     const skip = h('button', { class: 'btn btn-ghost', type: 'button' }, 'דלג');
     const minus = h('button', { class: 'btn btn-ghost', type: 'button', 'aria-label': 'הפחת 15 שניות' }, `‎−${REST_ADJUST_SEC}`);
     const plus = h('button', { class: 'btn btn-ghost', type: 'button', 'aria-label': 'הוסף 15 שניות' }, `‎+${REST_ADJUST_SEC}`);

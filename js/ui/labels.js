@@ -25,3 +25,20 @@ export function formatShortDate(ms) {
   const d = new Date(ms);
   return `${d.getDate()}.${d.getMonth() + 1}`;
 }
+
+export const SEX_LABELS = { m: 'גבר', f: 'אישה' };
+export const GOAL_LABELS = {
+  tone: ['חיטוב', 'הגדרה שרירית ושריפת שומן'],
+  loss: ['הרזיה', 'ירידה במשקל בצורה מבוקרת'],
+  mass: ['מסה', 'בניית שריר וכוח'],
+  fit: ['כושר כללי', 'בריאות, כוח וסיבולת']
+};
+export const LEVEL_LABELS = {
+  beg: ['מתחיל', 'עד שנה של אימונים'],
+  mid: ['בינוני', 'בין שנה לשלוש שנים'],
+  adv: ['מתקדם', 'יותר משלוש שנים']
+};
+export const INJURY_LABELS = {
+  neck: 'צוואר', shoulders: 'כתפיים', elbows: 'מרפקים', wrists: 'פרקי ידיים',
+  lowerBack: 'גב תחתון', hips: 'ירכיים', knees: 'ברכיים', ankles: 'קרסוליים'
+};

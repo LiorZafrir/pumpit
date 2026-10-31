@@ -21,6 +21,18 @@ const SCHEMES = {
 };
 const HOLD_SECONDS = { beg: 30, mid: 40, adv: 60 };
 
+/**
+ * Whether an exercise can be done where the user is. At home it needs the gear they own, and the
+ * calisthenics and military styles leave out anything that needs external weights.
+ */
+export function availableAt(exercise, { location, gear = [], style = 'regular' }) {
+  if (!exercise.location.includes(location)) return false;
+  if (location === 'gym') return true;
+  const needs = exercise.gear || [];
+  if (style !== 'regular' && needs.includes('dumbbells')) return false;
+  return needs.every((g) => gear.includes(g));
+}
+
 /** Which session comes next, given how many workouts were completed so far. */
 export function nextSession(split, completedCount = 0) {
   const n = split.sessions.length;
@@ -43,9 +55,11 @@ export function nextSessionAfter(split, lastIndex) {
  * @param {string} p.level beg | mid | adv
  * @param {string[]} [p.injuries] areas to avoid
  * @param {number} [p.variant] 0 for the first session of a type in the cycle, 1 for the second...
+ * @param {string[]} [p.gear] equipment available at home
+ * @param {string} [p.style] home style: regular | calisthenics | military
  * @param {object[]} [catalog]
  */
-export function planWorkout({ sessionType, location, goal, level, injuries = [], variant = 0 }, catalog = LOCAL_EXERCISES) {
+export function planWorkout({ sessionType, location, goal, level, injuries = [], variant = 0, gear = [], style = 'regular' }, catalog = LOCAL_EXERCISES) {
   const slots = SLOTS[sessionType];
   if (!slots) throw new RangeError(`unknown session type: ${sessionType}`);
   const scheme = SCHEMES[goal] || SCHEMES.fit;
@@ -53,9 +67,11 @@ export function planWorkout({ sessionType, location, goal, level, injuries = [],
   const limit = EXERCISES_BY_LEVEL[level] ?? EXERCISES_BY_LEVEL.beg;
 
   const pool = catalog.filter((e) =>
-    e.location.includes(location)
+    availableAt(e, { location, gear, style })
     && LEVEL_RANK[e.level] <= rank
     && !e.loads.some((area) => injuries.includes(area)));
+  // Military style: its favourite exercises come first within each muscle.
+  if (location === 'home' && style === 'military') pool.sort((a, b) => Number(Boolean(b.mil)) - Number(Boolean(a.mil)));
 
   const used = new Set();
   const exercises = [];

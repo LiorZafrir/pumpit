@@ -1,6 +1,7 @@
 // The only module that talks to Firestore. Screens call these functions, never the SDK.
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -33,6 +34,14 @@ export async function createProfile(uid, data) {
 /** Remembers the last gym/home choice. @param {'gym'|'home'} location */
 export async function setLastLocation(uid, location) {
   await updateDoc(doc(db, 'users', uid), { lastLocation: location, updatedAt: serverTimestamp() });
+}
+
+/**
+ * Partial profile update. Nested settings use dotted keys ("settings.restSec") so other settings stay as they are.
+ * @param {Record<string, unknown>} patch
+ */
+export function updateProfile(uid, patch) {
+  return updateDoc(doc(db, 'users', uid), { ...patch, updatedAt: serverTimestamp() });
 }
 
 // ---- workouts ----
@@ -98,4 +107,22 @@ export async function getBodyWeights(uid, count = 400) {
 /** One entry per day (the document id is the date), so logging again the same day replaces it. */
 export function saveBodyWeight(uid, dayKey, data) {
   return setDoc(doc(db, 'users', uid, 'bodyWeight', dayKey), data);
+}
+
+// ---- account deletion ----
+
+const USER_COLLECTIONS = ['sets', 'workouts', 'exerciseState', 'bodyWeight'];
+const BATCH_SIZE = 400;
+
+/** Deletes every document the user owns, the profile last (so a failed attempt can simply be repeated). */
+export async function deleteAllUserData(uid) {
+  for (const name of USER_COLLECTIONS) {
+    const snap = await getDocs(col(uid, name));
+    for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
+      const batch = writeBatch(db);
+      for (const d of snap.docs.slice(i, i + BATCH_SIZE)) batch.delete(d.ref);
+      await batch.commit();
+    }
+  }
+  await deleteDoc(doc(db, 'users', uid));
 }

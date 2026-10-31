@@ -149,3 +149,38 @@ describe('nextSessionAfter', () => {
     assert.equal(nextSessionAfter(recommendedSplit(2), 5).index, 0);
   });
 });
+
+describe('home gear and style', () => {
+  const idsOf = (opts) => planWorkout({ ...base, level: 'adv', sessionType: 'fullBody', location: 'home', ...opts }).exercises.map((e) => e.exerciseId);
+  const allHomeIds = (opts) => ['fullBody', 'upper', 'lower', 'push', 'pull', 'legs'].flatMap((sessionType) =>
+    [0, 1].flatMap((variant) => planWorkout({ ...base, level: 'adv', sessionType, location: 'home', variant, ...opts }).exercises.map((e) => e.exerciseId)));
+
+  it('without gear nothing that needs gear is planned at home', () => {
+    for (const id of allHomeIds({})) assert.ok(!(exerciseById(id).gear || []).length, id);
+  });
+
+  it('dumbbells and a pull-up bar unlock their exercises', () => {
+    const ids = allHomeIds({ gear: ['dumbbells', 'pullupBar'] });
+    assert.ok(ids.some((id) => (exerciseById(id).gear || []).includes('dumbbells')));
+    assert.ok(ids.includes('local-pull-up'));
+    const withBarOnly = allHomeIds({ gear: ['pullupBar'] });
+    assert.ok(withBarOnly.every((id) => !(exerciseById(id).gear || []).includes('dumbbells')));
+  });
+
+  it('calisthenics and military never use dumbbells even when owned', () => {
+    for (const style of ['calisthenics', 'military']) {
+      for (const id of allHomeIds({ gear: ['dumbbells', 'pullupBar'], style })) assert.ok(!(exerciseById(id).gear || []).includes('dumbbells'), `${style}: ${id}`);
+    }
+  });
+
+  it('military style prefers its favourite exercises', () => {
+    const ids = idsOf({ style: 'military', gear: ['pullupBar'] });
+    assert.ok(ids.every((id) => !['local-incline-push-up', 'local-inverted-row'].includes(id) || exerciseById(id).mil));
+    assert.ok(ids.includes('local-push-up'));
+  });
+
+  it('gear and style do not change gym plans', () => {
+    const gym = (opts) => planWorkout({ ...base, level: 'adv', sessionType: 'upper', location: 'gym', ...opts });
+    assert.deepEqual(gym({}), gym({ gear: ['dumbbells'], style: 'military' }));
+  });
+});
