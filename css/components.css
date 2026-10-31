@@ -342,3 +342,27 @@
 .swap-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .swap-name { font-weight: 500; }
 .swap-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding-inline: 16px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 15px; flex-shrink: 0; }
+
+/* progress screen */
+.period-picker { align-self: flex-start; }
+.progress-card { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+.progress-title { font-size: 18px; }
+.progress-now { color: var(--accent); font-weight: 800; font-size: 20px; }
+.empty-inline { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 0; color: var(--muted); text-align: center; }
+.select { width: 100%; min-height: 48px; padding-inline: 14px; border-radius: var(--r-sm); background: var(--card-strong); border: 1px solid var(--line); color: var(--text); }
+.chart-wrap { width: 100%; }
+.chart { width: 100%; height: auto; overflow: visible; }
+.chart-grid { stroke: var(--line); stroke-width: 1; }
+.chart-label { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.chart-trend { stroke: var(--text-3); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart-dot { fill: var(--accent); stroke: var(--bg); stroke-width: 1.5; }
+.weigh-in { display: flex; gap: 10px; align-items: stretch; }
+.weigh-input { flex: 1; display: flex; align-items: center; gap: 8px; padding-inline: 14px; min-height: 48px; border-radius: var(--r-sm); background: var(--card-strong); border: 1px solid var(--line); }
+.weigh-input input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; font-size: 18px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.btn-compact { min-height: 48px; padding-inline: 18px; font-size: 15px; }
+.record-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.record-row { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.record-icon { color: var(--accent); }
+.record-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.record-name { color: var(--text); font-weight: 500; }

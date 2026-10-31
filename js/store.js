@@ -80,3 +80,22 @@ export function removeWorkout(uid, workoutId, setIds) {
   batch.delete(doc(db, 'users', uid, 'workouts', workoutId));
   return batch.commit();
 }
+
+// ---- progress ----
+
+/** Sets logged at or after `sinceMs`, oldest first. One range filter on one field: no composite index needed. */
+export async function getSetsSince(uid, sinceMs) {
+  const snap = await getDocs(query(col(uid, 'sets'), where('at', '>=', sinceMs), orderBy('at', 'asc')));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/** Newest first. @returns {Promise<{ id: string, kg: number, at: number }[]>} */
+export async function getBodyWeights(uid, count = 400) {
+  const snap = await getDocs(query(col(uid, 'bodyWeight'), orderBy('at', 'desc'), limit(count)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/** One entry per day (the document id is the date), so logging again the same day replaces it. */
+export function saveBodyWeight(uid, dayKey, data) {
+  return setDoc(doc(db, 'users', uid, 'bodyWeight', dayKey), data);
+}

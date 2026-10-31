@@ -3,6 +3,8 @@
 import * as store from './store.js';
 import { exerciseById } from './data/local-exercises.js';
 import { nextSessionAfter, planWorkout } from './logic/planner.js';
+import { periodStart } from './logic/progress.js';
+import { toDateKey } from './logic/week.js';
 import { evaluateExercise } from './logic/progression.js';
 import { recommendedSplit } from './logic/split.js';
 import { alternativesFor, swapPlanItem } from './logic/swap.js';
@@ -36,7 +38,11 @@ const hasSets = (active, exerciseIndex) => {
   return !item || active.sets.some((s) => s.exerciseId === item.exerciseId);
 };
 
+// Sets fetched for the progress screen, by period. Dropped whenever a set is logged or removed.
+const progressCache = new Map();
+
 export function clearSession() {
+  progressCache.clear();
   Object.assign(session, { user: null, profile: null, workouts: [], states: {}, active: null, summary: null });
 }
 
@@ -118,8 +124,31 @@ export const actions = {
     const data = buildSetDoc({ workoutId: a.id, planItem, setIndex, reps, weightKg, durationSec, targetReps, targetWeightKg, now: Date.now() });
     const id = setDocId(a.id, exerciseIndex, setIndex);
     a.sets.push({ id, ...data });
+    progressCache.clear();
     track(store.saveSet(session.user.uid, id, data));
     return data;
+  },
+
+  /** Sets inside a period for the progress screen (cached until a set changes). */
+  progressSets(period) {
+    if (!progressCache.has(period)) {
+      const pending = store.getSetsSince(session.user.uid, periodStart(period));
+      progressCache.set(period, pending);
+      pending.catch(() => progressCache.delete(period));
+    }
+    return progressCache.get(period);
+  },
+
+  bodyWeights() {
+    return store.getBodyWeights(session.user.uid);
+  },
+
+  /** Saves today's body weight. Not awaited: it must work offline. Returns the entry for the screen. */
+  logBodyWeight(kg) {
+    const at = Date.now();
+    const entry = { id: toDateKey(new Date(at)), kg, at };
+    track(store.saveBodyWeight(session.user.uid, entry.id, { kg, at }));
+    return entry;
   },
 
   /** Replacement candidates for a plan item that has no sets logged yet. */
@@ -187,6 +216,7 @@ export const actions = {
     if (!a) return;
     session.workouts = session.workouts.filter((w) => w.id !== a.id);
     session.active = null;
+    progressCache.clear();
     track(store.removeWorkout(session.user.uid, a.id, a.sets.map((s) => s.id)));
   }
 };

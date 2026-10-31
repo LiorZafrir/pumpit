@@ -19,3 +19,9 @@ export function formatDuration(totalSec) {
   if (min < 60) return `${min} דק׳`;
   return `${Math.floor(min / 60)} ש׳ ${String(min % 60).padStart(2, '0')} דק׳`;
 }
+
+/** "7.3" for 7 March, local time. */
+export function formatShortDate(ms) {
+  const d = new Date(ms);
+  return `${d.getDate()}.${d.getMonth() + 1}`;
+}
