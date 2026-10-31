@@ -7,8 +7,9 @@ import { MUSCLE_LABELS, formatClock } from '../ui/labels.js';
 import { exerciseMedia } from '../ui/exercise-media.js';
 import { exerciseById } from '../data/local-exercises.js';
 import { guideFor } from '../data/exercise-guides.js';
-import { nextUp, positionFrom, progressFraction } from '../logic/workout-state.js';
+import { MAX_DROPS, nextUp, partnerOf, positionFrom, progressFraction } from '../logic/workout-state.js';
 import { settingsOf } from '../logic/settings.js';
+import { shortRestSec } from '../logic/shortmode.js';
 import { beep, keepAwake, releaseAwake, unlockAudio, vibrate } from '../services/feedback.js';
 
 const WEIGHT_STEP = 2.5;
@@ -55,7 +56,9 @@ function stepper({ label, value, step, min, max, unit }) {
  * }} ctx
  */
 export function render({ workout, states, actions, navigate, profile }) {
-  const restSec = settingsOf(profile).restSec;
+  const settings = settingsOf(profile);
+  // A shortened workout (20/30/45 minutes) also runs on shorter rests.
+  const restSec = workout.doc.shortMin ? shortRestSec(settings.restSec) : settings.restSec;
   const plan = workout.doc.plan;
   const root = h('section', { class: 'screen workout' });
   let restTimer = null;
@@ -140,6 +143,33 @@ export function render({ workout, states, actions, navigate, profile }) {
     const reps = timed
       ? stepper({ label: 'זמן', value: startReps, step: 5, min: 0, max: 3600, unit: 'שנ׳' })
       : stepper({ label: 'חזרות', value: startReps, step: 1, min: 0, max: 300, unit: '' });
+    // Drop set: after the main set, lighter segments with no rest in between (advanced technique, set in the profile).
+    const drops = [];
+    const dropList = h('div', { class: 'drop-list' });
+    const dropBtn = h('button', { class: 'btn btn-ghost', type: 'button' }, icon('plus', { size: 20 }), h('span', null, 'הוסף דרופ'));
+    function addDrop() {
+      const last = drops.length ? drops[drops.length - 1] : { weight, reps };
+      const lastWeight = last.weight.get();
+      const row = {
+        weight: stepper({ label: 'משקל', value: Math.max(0, round1(Math.round((lastWeight * 0.8) / WEIGHT_STEP) * WEIGHT_STEP)), step: WEIGHT_STEP, min: 0, max: 600, unit: 'ק״ג' }),
+        reps: stepper({ label: 'חזרות', value: Math.max(1, last.reps.get()), step: 1, min: 0, max: 300, unit: '' })
+      };
+      const remove = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'הסר דרופ' }, icon('close', { size: 20 }));
+      const el = h('div', { class: 'drop-row' },
+        h('div', { class: 'drop-head' }, h('span', { class: 'muted small' }, `דרופ ${drops.length + 1}`), remove),
+        h('div', { class: 'sheet-steppers' }, row.weight.el, row.reps.el));
+      remove.addEventListener('click', () => {
+        drops.splice(drops.indexOf(row), 1);
+        el.remove();
+        dropList.querySelectorAll('.drop-head .muted').forEach((label, i) => { label.textContent = `דרופ ${i + 1}`; });
+        dropBtn.hidden = false;
+      });
+      drops.push(row);
+      dropList.append(el);
+      dropBtn.hidden = drops.length >= MAX_DROPS;
+    }
+    dropBtn.addEventListener('click', addDrop);
+
     const confirm = h('button', { class: 'btn btn-primary', type: 'button' }, 'אישור');
     confirm.addEventListener('click', () => {
       confirm.disabled = true;
@@ -149,17 +179,31 @@ export function render({ workout, states, actions, navigate, profile }) {
         weightKg: timed ? 0 : weight.get(),
         durationSec: timed ? reps.get() : undefined,
         targetReps: timed ? undefined : item.repsMax,
-        targetWeightKg: timed ? undefined : startWeight
+        targetWeightKg: timed ? undefined : startWeight,
+        drops: drops.map((d) => ({ reps: d.reps.get(), weightKg: d.weight.get() }))
       });
       sheet.close();
       afterSet(pos);
     });
-    sheet.body.append(h('div', { class: 'sheet-steppers' }, ...(weight ? [weight.el] : []), reps.el), confirm);
+    sheet.body.append(
+      h('div', { class: 'sheet-steppers' }, ...(weight ? [weight.el] : []), reps.el),
+      ...(settings.dropset && !timed ? [dropList, dropBtn] : []),
+      confirm);
   }
 
   function afterSet(justDone) {
-    if (positionFrom(plan, workout.sets).finished) finishNow();
+    const next = positionFrom(plan, workout.sets);
+    if (next.finished) finishNow();
+    // First half of a superset: straight to the partner, the rest comes after the second one.
+    else if (plan[justDone.exerciseIndex].pair && next.exerciseIndex === justDone.exerciseIndex + 1) showExercise();
     else showRest(justDone);
+  }
+
+  /** "60 ק״ג × 8 + 50 ק״ג × 6" for a logged set, including its drops. */
+  function setText(s) {
+    if (s.durationSec != null) return `${s.durationSec} שנ׳`;
+    const parts = [`${kg(s.weightKg)} × ${s.reps}`, ...(Array.isArray(s.drops) ? s.drops.map((d) => `${kg(d.weightKg)} × ${d.reps}`) : [])];
+    return parts.join(' + ');
   }
 
   // ---- exercise view ----
@@ -196,6 +240,7 @@ export function render({ workout, states, actions, navigate, profile }) {
         h('h1', { class: 'ob-title' }, exercise ? exercise.name : 'תרגיל'),
         h('p', { class: 'muted' }, `${exercise ? MUSCLE_LABELS[exercise.muscle] : ''} · תרגיל ${pos.exerciseIndex + 1} מתוך ${plan.length}`)),
       h('div', { class: 'set-badge num' }, `סט ${pos.setIndex + 1} / ${item.sets}`),
+      supersetNote(pos.exerciseIndex),
       exerciseMedia(item.exerciseId),
       h('div', { class: 'tiles' },
         h('div', { class: 'tile' }, h('span', { class: 'muted small' }, 'יעד'),
@@ -205,6 +250,17 @@ export function render({ workout, states, actions, navigate, profile }) {
       lastLine,
       guideBlock(item.exerciseId),
       h('div', { class: 'ob-actions' }, done, swapButton(pos.exerciseIndex)));
+  }
+
+  function supersetNote(exerciseIndex) {
+    const partner = partnerOf(plan, exerciseIndex);
+    if (partner === -1) return null;
+    const first = plan[exerciseIndex].pair === true;
+    const other = exerciseById(plan[partner].exerciseId);
+    return h('p', { class: 'superset-note' }, icon('bolt', { size: 18 }),
+      h('span', null, first
+        ? `סופר סט: אחרי הסט עוברים ישר ל${other ? other.name : 'תרגיל השני'}`
+        : `סופר סט: אחרי הסט מנוחה, וחוזרים ל${other ? other.name : 'תרגיל הראשון'}`));
   }
 
   function guideBlock(exerciseId) {
@@ -285,7 +341,7 @@ export function render({ workout, states, actions, navigate, profile }) {
     plus.addEventListener('click', () => adjust(REST_ADJUST_SEC));
     skip.addEventListener('click', showExercise);
 
-    const next = nextUp(plan, justDone);
+    const next = nextUp(plan, workout.sets, justDone.exerciseIndex);
     const nextItem = next ? plan[next.exerciseIndex] : null;
     const nextExercise = nextItem ? exerciseById(nextItem.exerciseId) : null;
     const doneItem = plan[justDone.exerciseIndex];
@@ -304,7 +360,7 @@ export function render({ workout, states, actions, navigate, profile }) {
         h('span', { class: 'muted small' }, `הושלמו · ${doneExercise ? doneExercise.name : ''}`),
         h('ul', { class: 'done-list' }, ...doneSets.map((s, i) =>
           h('li', { class: 'num' }, h('span', null, `סט ${i + 1}`),
-            h('span', { dir: 'ltr' }, s.durationSec != null ? `${s.durationSec} שנ׳` : `${kg(s.weightKg)} × ${s.reps}`))))));
+            h('span', { dir: 'ltr' }, setText(s)))))));
 
     restTimer = setInterval(tick, 250);
     tick();

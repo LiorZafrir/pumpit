@@ -308,3 +308,37 @@ describe('settings screen and account deletion', () => {
     for (const p of paths) await assertSucceeds(deleteDoc(doc(alice(), p)));
   });
 });
+
+describe('short workouts, supersets and drop sets', () => {
+  it('a short superset workout and a drop set built by the app are accepted', async () => {
+    const { buildSetDoc, buildWorkoutDoc } = await import('../../js/logic/workout-state.js');
+    const plan = [
+      { exerciseId: 'local-bench-press', sets: 3, repsMin: 6, repsMax: 10, pair: true },
+      { exerciseId: 'local-barbell-row', sets: 3, repsMin: 6, repsMax: 10 }
+    ];
+    const workout = buildWorkoutDoc({ now: Date.now(), location: 'gym', title: 'x', sessionType: 'upper', sessionIndex: 0, plan, shortMin: 30 });
+    await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/workouts/w1`), workout));
+    const drops = [{ reps: 8, weightKg: 50 }, { reps: 6, weightKg: 40 }];
+    const set = buildSetDoc({ workoutId: 'w1', planItem: plan[0], setIndex: 0, reps: 10, weightKg: 60, drops, now: Date.now() });
+    await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/sets/s1`), set));
+  });
+
+  it('only 20, 30 or 45 minutes are allowed as a short workout', async () => {
+    const base = { date: '2026-01-01', location: 'gym', title: 'x', status: 'active', startedAt: 1 };
+    await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/workouts/a`), { ...base, shortMin: 45 }));
+    await assertFails(setDoc(doc(alice(), `users/${ALICE}/workouts/b`), { ...base, shortMin: 25 }));
+    await assertFails(setDoc(doc(alice(), `users/${ALICE}/workouts/c`), { ...base, shortMin: '30' }));
+  });
+
+  it('malformed drops are rejected', async () => {
+    const set = (drops) => setDoc(doc(alice(), `users/${ALICE}/sets/d`), { ...goodSet, drops });
+    await assertSucceeds(set([]));
+    await assertSucceeds(set(Array.from({ length: 6 }, () => ({ reps: 5, weightKg: 20 }))));
+    await assertFails(set(Array.from({ length: 7 }, () => ({ reps: 5, weightKg: 20 }))));
+    await assertFails(set([{ reps: 5, weightKg: 20, note: 'x' }]));
+    await assertFails(set([{ reps: -1, weightKg: 20 }]));
+    await assertFails(set([{ reps: 5, weightKg: 9999 }]));
+    await assertFails(set([{ reps: 5, weightKg: 20 }, 'bad']));
+    await assertFails(set([{ reps: 5 }]));
+  });
+});

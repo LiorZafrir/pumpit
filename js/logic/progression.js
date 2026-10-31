@@ -15,7 +15,8 @@ export function regionOf(muscle) {
 const round1 = (n) => Math.round(n * 10) / 10;
 
 export function setVolume(set) {
-  return (set.weightKg || 0) * (set.reps || 0);
+  const drops = Array.isArray(set.drops) ? set.drops : [];
+  return (set.weightKg || 0) * (set.reps || 0) + drops.reduce((sum, d) => sum + (d.weightKg || 0) * (d.reps || 0), 0);
 }
 
 export function workoutVolume(sets) {

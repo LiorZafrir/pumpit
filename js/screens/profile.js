@@ -221,9 +221,9 @@ export function render({ user, profile, actions }) {
       h('div', { class: 'choice-grid', role: 'radiogroup', 'aria-label': 'סגנון אימון בבית' }, ...styleButtons)),
 
     section('טכניקות מתקדמות',
-      switchRow('סופר סטים', 'שני תרגילים ברצף בלי מנוחה ביניהם', settings.superset, (on) => save({ 'settings.superset': on })),
-      switchRow('דרופ סטים', 'הורדת משקל באותו סט עד כשל', settings.dropset, (on) => save({ 'settings.dropset': on })),
-      h('p', { class: 'muted small' }, 'המתגים נשמרים כבר עכשיו. הטכניקות עצמן ייכנסו לאימון בשלב הבא.')),
+      switchRow('סופר סטים', 'האימון מחולק לזוגות תרגילים, בלי מנוחה ביניהם', settings.superset, (on) => save({ 'settings.superset': on })),
+      switchRow('דרופ סטים', 'בחלון רישום הסט מופיע "הוסף דרופ" להורדת משקל באותו סט', settings.dropset, (on) => save({ 'settings.dropset': on })),
+      h('p', { class: 'muted small' }, 'בכרטיס "האימון של היום" אפשר גם לבחור 20, 30 או 45 דקות. אז האימון מתקצר ומחולק לסופר סטים אוטומטית.')),
 
     section('פרטים אישיים',
       h('label', { class: 'field' }, h('span', { class: 'muted small' }, 'שם'), h('span', { class: 'weigh-input' }, nameInput)),

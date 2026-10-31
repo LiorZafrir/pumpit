@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildSetDoc, buildWorkoutDoc, finishPatch, nextUp, positionFrom, progressFraction, setCounts, setDocId
+  buildSetDoc, buildWorkoutDoc, finishPatch, nextUp, partnerOf, positionFrom, progressFraction, setCounts, setDocId, toStoredPlanItem
 } from '../../js/logic/workout-state.js';
 
 const plan = [
@@ -51,12 +51,78 @@ describe('progress and counts', () => {
 
 describe('nextUp', () => {
   it('is the next set of the same exercise, then the first set of the next exercise', () => {
-    assert.deepEqual(nextUp(plan, { exerciseIndex: 0, setIndex: 0 }), { exerciseIndex: 0, setIndex: 1, newExercise: false });
-    assert.deepEqual(nextUp(plan, { exerciseIndex: 0, setIndex: 1 }), { exerciseIndex: 1, setIndex: 0, newExercise: true });
+    assert.deepEqual(nextUp(plan, logged('a'), 0), { exerciseIndex: 0, setIndex: 1, newExercise: false });
+    assert.deepEqual(nextUp(plan, logged('a', 'a'), 0), { exerciseIndex: 1, setIndex: 0, newExercise: true });
   });
 
   it('is null after the last set', () => {
-    assert.equal(nextUp(plan, { exerciseIndex: 2, setIndex: 0 }), null);
+    assert.equal(nextUp(plan, logged('a', 'a', 'b', 'b', 'c'), 2), null);
+  });
+});
+
+describe('supersets', () => {
+  const pair = [
+    { exerciseId: 'a', sets: 2, pair: true, repsMin: 8, repsMax: 12 },
+    { exerciseId: 'b', sets: 2, repsMin: 8, repsMax: 12 },
+    { exerciseId: 'c', sets: 1, repsMin: 8, repsMax: 12 }
+  ];
+  const at = (...ids) => positionFrom(pair, logged(...ids));
+
+  it('alternates between the two exercises, then moves on', () => {
+    assert.deepEqual(at(), { exerciseIndex: 0, setIndex: 0, finished: false });
+    assert.deepEqual(at('a'), { exerciseIndex: 1, setIndex: 0, finished: false });
+    assert.deepEqual(at('a', 'b'), { exerciseIndex: 0, setIndex: 1, finished: false });
+    assert.deepEqual(at('a', 'b', 'a'), { exerciseIndex: 1, setIndex: 1, finished: false });
+    assert.deepEqual(at('a', 'b', 'a', 'b'), { exerciseIndex: 2, setIndex: 0, finished: false });
+    assert.equal(at('a', 'b', 'a', 'b', 'c').finished, true);
+  });
+
+  it('resumes correctly from sets logged in any order', () => {
+    assert.deepEqual(at('b', 'a'), { exerciseIndex: 0, setIndex: 1, finished: false });
+  });
+
+  it('handles pairs with different set counts', () => {
+    const uneven = [{ exerciseId: 'a', sets: 1, pair: true }, { exerciseId: 'b', sets: 3 }];
+    assert.deepEqual(positionFrom(uneven, logged('a', 'b')), { exerciseIndex: 1, setIndex: 1, finished: false });
+    assert.deepEqual(positionFrom(uneven, logged('a', 'b', 'b')), { exerciseIndex: 1, setIndex: 2, finished: false });
+    assert.equal(positionFrom(uneven, logged('a', 'b', 'b', 'b')).finished, true);
+  });
+
+  it('nextUp follows the pair, and progress counts every set', () => {
+    assert.deepEqual(nextUp(pair, logged('a'), 0), { exerciseIndex: 1, setIndex: 0, newExercise: false });
+    assert.deepEqual(nextUp(pair, logged('a', 'b', 'a', 'b'), 1), { exerciseIndex: 2, setIndex: 0, newExercise: true });
+    assert.equal(progressFraction(pair, logged('a', 'b')), 2 / 5);
+  });
+
+  it('partnerOf finds the other half of a pair from either side', () => {
+    assert.equal(partnerOf(pair, 0), 1);
+    assert.equal(partnerOf(pair, 1), 0);
+    assert.equal(partnerOf(pair, 2), -1);
+  });
+
+  it('the stored plan keeps the pair flag only when true', () => {
+    assert.equal(toStoredPlanItem({ exerciseId: 'a', sets: 2, pair: true }).pair, true);
+    assert.equal('pair' in toStoredPlanItem({ exerciseId: 'a', sets: 2 }), false);
+  });
+});
+
+describe('drop sets and short workouts in documents', () => {
+  it('buildSetDoc keeps drops (cleaned, at most 6) for weighted sets only', () => {
+    const item = { exerciseId: 'a', sets: 3, repsMin: 8, repsMax: 12 };
+    const drops = Array.from({ length: 8 }, (_, i) => ({ reps: 8.4 + i, weightKg: 50 - i * 5.04 }));
+    const doc = buildSetDoc({ workoutId: 'w', planItem: item, setIndex: 0, reps: 8, weightKg: 60, drops, now: 1 });
+    assert.equal(doc.drops.length, 6);
+    assert.deepEqual(doc.drops[0], { reps: 8, weightKg: 50 });
+    assert.equal(buildSetDoc({ workoutId: 'w', planItem: item, setIndex: 0, reps: 8, weightKg: 60, now: 1 }).drops, undefined);
+    assert.equal(buildSetDoc({ workoutId: 'w', planItem: item, setIndex: 0, reps: 8, weightKg: 60, drops: [], now: 1 }).drops, undefined);
+    const timed = buildSetDoc({ workoutId: 'w', planItem: { exerciseId: 'p', sets: 1, durationSec: 30 }, setIndex: 0, reps: 0, weightKg: 0, durationSec: 30, drops, now: 1 });
+    assert.equal(timed.drops, undefined);
+  });
+
+  it('buildWorkoutDoc stores shortMin only when given', () => {
+    const base = { now: 1, location: 'gym', title: 't', sessionType: 'upper', sessionIndex: 0, plan };
+    assert.equal('shortMin' in buildWorkoutDoc(base), false);
+    assert.equal(buildWorkoutDoc({ ...base, shortMin: 30 }).shortMin, 30);
   });
 });
 
@@ -65,7 +131,7 @@ describe('documents', () => {
 
   it('buildWorkoutDoc has only allowed fields, no undefined values, and a local date', () => {
     const allowed = ['date', 'location', 'title', 'sessionType', 'sessionIndex', 'plan', 'startedAt', 'endedAt',
-      'durationSec', 'plannedSets', 'completedSets', 'volumeKg', 'status'];
+      'durationSec', 'plannedSets', 'completedSets', 'volumeKg', 'status', 'shortMin'];
     const doc = buildWorkoutDoc({ now, location: 'gym', title: 'אימון', sessionType: 'upper', sessionIndex: 0, plan });
     for (const [k, v] of Object.entries(doc)) {
       assert.ok(allowed.includes(k), k);

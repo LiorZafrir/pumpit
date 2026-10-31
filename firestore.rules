@@ -41,7 +41,8 @@ service cloud.firestore {
 
     function validWorkout(d) {
       return d.keys().hasOnly(['date','location','title','sessionType','sessionIndex','plan',
-               'startedAt','endedAt','durationSec','plannedSets','completedSets','volumeKg','status'])
+               'startedAt','endedAt','durationSec','plannedSets','completedSets','volumeKg','status','shortMin'])
+        && (!('shortMin' in d) || d.shortMin in [20,30,45])
         && (!('sessionType' in d) || d.sessionType in ['fullBody','upper','lower','push','pull','legs'])
         && (!('sessionIndex' in d) || num(d.sessionIndex, 0, 5))
         && (!('plan' in d) || (d.plan is list && d.plan.size() <= 12))
@@ -57,6 +58,10 @@ service cloud.firestore {
         && (!('status' in d) || d.status in ['active','done']);
     }
 
+    function validDrop(x) {
+      return x is map && x.keys().hasOnly(['reps','weightKg']) && num(x.reps, 0, 300) && num(x.weightKg, 0, 600);
+    }
+
     function validSet(d) {
       return d.keys().hasOnly(['workoutId','exerciseId','setIndex','reps','weightKg',
                'targetReps','targetWeightKg','durationSec','drops','at'])
@@ -65,7 +70,10 @@ service cloud.firestore {
         && (!('targetReps' in d) || num(d.targetReps, 0, 300))
         && (!('targetWeightKg' in d) || num(d.targetWeightKg, 0, 600))
         && (!('durationSec' in d) || num(d.durationSec, 0, 3600))
-        && (!('drops' in d) || (d.drops is list && d.drops.size() <= 6))
+        && (!('drops' in d) || (d.drops is list && d.drops.size() <= 6 && (d.drops.size() == 0 || validDrop(d.drops[0]))
+          && (d.drops.size() < 2 || validDrop(d.drops[1])) && (d.drops.size() < 3 || validDrop(d.drops[2]))
+          && (d.drops.size() < 4 || validDrop(d.drops[3])) && (d.drops.size() < 5 || validDrop(d.drops[4]))
+          && (d.drops.size() < 6 || validDrop(d.drops[5]))))
         && (!('at' in d) || when(d.at));
     }
 

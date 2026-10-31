@@ -51,3 +51,12 @@ test('swapping to a timed exercise gives a hold time instead of reps', () => {
   assert.equal(next[0].durationSec, 40);
   assert.equal(next[0].repsMin, undefined);
 });
+
+test('a swapped slot keeps its superset flag and does not get more sets than it had', () => {
+  const p = plan().map((item, i) => (i === 0 ? { ...item, sets: 2, pair: true } : item));
+  const replacement = alternativesFor(p, 0, ctx)[0];
+  const next = swapPlanItem(p, 0, replacement, { goal: 'mass', level: 'mid' });
+  assert.equal(next[0].pair, true);
+  assert.equal(next[0].sets, 2);
+  assert.equal('pair' in swapPlanItem(plan(), 1, alternativesFor(plan(), 1, ctx)[0], { goal: 'mass', level: 'mid' })[1], false);
+});

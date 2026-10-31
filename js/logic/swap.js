@@ -24,7 +24,14 @@ export function alternativesFor(plan, index, { location, level, injuries = [], g
     && !e.loads.some((area) => injuries.includes(area)));
 }
 
-/** The plan with item `index` replaced by `exercise`, prescribed for the user's goal and level. */
+/**
+ * The plan with item `index` replaced by `exercise`, prescribed for the user's goal and level. The slot keeps its
+ * place in a superset pair and never gets more sets than it had, so a shortened workout stays short.
+ */
 export function swapPlanItem(plan, index, exercise, { goal, level }) {
-  return plan.map((item, i) => (i === index ? toStoredPlanItem(prescribeExercise(exercise, goal, level)) : item));
+  return plan.map((item, i) => {
+    if (i !== index) return item;
+    const next = toStoredPlanItem(prescribeExercise(exercise, goal, level));
+    return toStoredPlanItem({ ...next, sets: Math.min(next.sets, item.sets), pair: item.pair });
+  });
 }

@@ -390,3 +390,12 @@
 .rest-stepper { gap: 6px; }
 .rest-value { min-width: 44px; }
 .setting-text { flex: 1; }
+
+/* short mode, supersets, drop sets */
+.duration-row { gap: 10px; flex-wrap: wrap; }
+.exercise-row.in-pair { border-inline-start: 3px solid var(--accent); padding-inline-start: 10px; }
+.superset-note { display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 14px; font-weight: 500; }
+.drop-list { display: flex; flex-direction: column; gap: 12px; }
+.drop-row { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.drop-head { display: flex; align-items: center; justify-content: space-between; }
+.drop-row .step-btn { width: 52px; height: 52px; }

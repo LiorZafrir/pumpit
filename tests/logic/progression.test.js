@@ -13,6 +13,7 @@ describe('volume', () => {
     assert.equal(setVolume({ reps: 12 }), 0);
     assert.equal(workoutVolume(sets([62.5, 8], [62.5, 7], [60, 6])), 1297.5); // 500 + 437.5 + 360
     assert.equal(workoutVolume([]), 0);
+    assert.equal(setVolume({ weightKg: 60, reps: 8, drops: [{ weightKg: 50, reps: 6 }, { weightKg: 40, reps: 5 }] }), 480 + 300 + 200);
   });
 });
 
