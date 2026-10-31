@@ -4,7 +4,9 @@ import { icon } from '../ui/icons.js';
 import { createRing } from '../ui/ring.js';
 import { openSheet } from '../ui/sheet.js';
 import { MUSCLE_LABELS, formatClock } from '../ui/labels.js';
+import { exerciseMedia } from '../ui/exercise-media.js';
 import { exerciseById } from '../data/local-exercises.js';
+import { guideFor } from '../data/exercise-guides.js';
 import { DEFAULT_REST_SEC, nextUp, positionFrom, progressFraction } from '../logic/workout-state.js';
 import { beep, keepAwake, releaseAwake, unlockAudio, vibrate } from '../services/feedback.js';
 
@@ -47,7 +49,7 @@ function stepper({ label, value, step, min, max, unit }) {
  * @param {{
  *   workout: { id: string, doc: object, sets: object[] },
  *   states: Record<string, object>,
- *   actions: { recordSet: Function, finish: Function, discard: Function },
+ *   actions: { recordSet: Function, finish: Function, discard: Function, alternatives: Function, swapExercise: Function },
  *   navigate: (name: string) => void
  * }} ctx
  */
@@ -180,14 +182,48 @@ export function render({ workout, states, actions, navigate }) {
         h('h1', { class: 'ob-title' }, exercise ? exercise.name : 'תרגיל'),
         h('p', { class: 'muted' }, `${exercise ? MUSCLE_LABELS[exercise.muscle] : ''} · תרגיל ${pos.exerciseIndex + 1} מתוך ${plan.length}`)),
       h('div', { class: 'set-badge num' }, `סט ${pos.setIndex + 1} / ${item.sets}`),
-      h('div', { class: 'card media-slot', 'aria-hidden': 'true' }, icon('dumbbell', { size: 56 })),
+      exerciseMedia(item.exerciseId),
       h('div', { class: 'tiles' },
         h('div', { class: 'tile' }, h('span', { class: 'muted small' }, 'יעד'),
           h('span', { class: 'tile-value num', dir: 'ltr' }, timed ? `${item.durationSec} שנ׳` : `${item.repsMin}-${item.repsMax}`)),
         timed ? null : h('div', { class: 'tile' }, h('span', { class: 'muted small' }, 'משקל'),
           h('span', { class: 'tile-value num', dir: 'ltr' }, state && typeof state.workingWeightKg === 'number' ? `${fmt(state.workingWeightKg)} ק״ג` : '—'))),
       lastLine,
-      h('div', { class: 'ob-actions' }, done));
+      guideBlock(item.exerciseId),
+      h('div', { class: 'ob-actions' }, done, swapButton(pos.exerciseIndex)));
+  }
+
+  function guideBlock(exerciseId) {
+    const guide = guideFor(exerciseId);
+    if (!guide) return null;
+    return h('details', { class: 'guide' },
+      h('summary', null, h('span', null, 'איך מבצעים'), icon('chevronDown', { size: 20 })),
+      h('div', { class: 'guide-body' },
+        h('ol', null, ...guide.steps.map((s) => h('li', null, s))),
+        h('p', { class: 'guide-tip' }, `שימו לב: ${guide.tip}`)));
+  }
+
+  // Only before the first set of an exercise, and only when there is a safe replacement.
+  function swapButton(exerciseIndex) {
+    if (!actions.alternatives(exerciseIndex).length) return null;
+    const btn = h('button', { class: 'btn btn-ghost', type: 'button' }, icon('swap', { size: 20 }), h('span', null, 'החלף תרגיל'));
+    btn.addEventListener('click', () => openSwapSheet(exerciseIndex));
+    return btn;
+  }
+
+  function openSwapSheet(exerciseIndex) {
+    const sheet = openSheet({ title: 'החלפת תרגיל' });
+    const list = h('div', { class: 'swap-list' });
+    for (const alt of actions.alternatives(exerciseIndex)) {
+      const row = h('button', { class: 'btn btn-ghost menu-option', type: 'button' }, h('span', null, alt.name),
+        h('span', { class: 'small muted' }, alt.location.length === 2 ? 'חדר כושר או בית' : alt.location[0] === 'gym' ? 'חדר כושר' : 'בית'));
+      row.addEventListener('click', () => {
+        sheet.close();
+        if (actions.swapExercise(exerciseIndex, alt.id)) showExercise();
+      });
+      list.append(row);
+    }
+    sheet.body.append(h('p', { class: 'sheet-text' }, 'אותו שריר, מתאים לציוד, לרמה ולאזורים הרגישים שלך.'), list);
   }
 
   // ---- rest view ----

@@ -321,3 +321,19 @@
 
 /* Sync warning */
 .sync-banner { position: fixed; z-index: 60; inset-inline: 16px; inset-block-start: calc(env(safe-area-inset-top) + 8px); background: var(--sheet); }
+
+/* exercise picture: two frames cross-fading, plus the how-to and swap controls */
+.ex-media { position: relative; aspect-ratio: 3 / 2; overflow: hidden; border-radius: var(--r-lg); background: var(--card); border: 1px solid var(--line); }
+.ex-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; -webkit-user-select: none; user-select: none; pointer-events: none; }
+.ex-frame-1 { animation: ex-swap 2.4s ease-in-out infinite; }
+@keyframes ex-swap { 0%, 35% { opacity: 0; } 50%, 85% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ex-frame-1 { animation: none; opacity: 0; } }
+
+.guide { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); }
+.guide summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding-inline: 16px; color: var(--text); font-weight: 500; cursor: pointer; list-style: none; }
+.guide summary::-webkit-details-marker { display: none; }
+.guide[open] summary svg { transform: rotate(180deg); }
+.guide-body { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 16px; color: var(--text-2); }
+.guide-body ol { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; }
+.guide-tip { color: var(--text-3); font-size: 14px; }
+.swap-list { display: flex; flex-direction: column; gap: 8px; }

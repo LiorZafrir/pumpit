@@ -5,6 +5,7 @@ import { exerciseById } from './data/local-exercises.js';
 import { nextSessionAfter, planWorkout } from './logic/planner.js';
 import { evaluateExercise } from './logic/progression.js';
 import { recommendedSplit } from './logic/split.js';
+import { alternativesFor, swapPlanItem } from './logic/swap.js';
 import { activeWorkout, lastFinished } from './logic/streak.js';
 import { buildSetDoc, buildWorkoutDoc, finishPatch, setDocId } from './logic/workout-state.js';
 import { SESSION_TITLES } from './ui/labels.js';
@@ -29,6 +30,11 @@ function track(promise) {
 }
 
 const newId = () => (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 20) : `w${Date.now()}${Math.floor(Math.random() * 1e6)}`);
+
+const hasSets = (active, exerciseIndex) => {
+  const item = active.doc.plan[exerciseIndex];
+  return !item || active.sets.some((s) => s.exerciseId === item.exerciseId);
+};
 
 export function clearSession() {
   Object.assign(session, { user: null, profile: null, workouts: [], states: {}, active: null, summary: null });
@@ -114,6 +120,34 @@ export const actions = {
     a.sets.push({ id, ...data });
     track(store.saveSet(session.user.uid, id, data));
     return data;
+  },
+
+  /** Replacement candidates for a plan item that has no sets logged yet. */
+  alternatives(exerciseIndex) {
+    const a = session.active;
+    if (!a || hasSets(a, exerciseIndex)) return [];
+    const { profile } = session;
+    return alternativesFor(a.doc.plan, exerciseIndex, {
+      location: a.doc.location, level: profile.level, injuries: Array.isArray(profile.injuries) ? profile.injuries : []
+    });
+  },
+
+  /** Swaps a plan item for another exercise of the same muscle. Only before its first set. Returns false if not allowed. */
+  swapExercise(exerciseIndex, exerciseId) {
+    const a = session.active;
+    if (!a || hasSets(a, exerciseIndex)) return false;
+    const exercise = actions.alternatives(exerciseIndex).find((e) => e.id === exerciseId);
+    if (!exercise) return false;
+    const { profile } = session;
+    const plan = swapPlanItem(a.doc.plan, exerciseIndex, exercise, { goal: profile.goal, level: profile.level });
+    const plannedSets = plan.reduce((sum, p) => sum + p.sets, 0);
+    // Mutated in place: the workout screen holds a reference to this plan array.
+    a.doc.plan.splice(0, a.doc.plan.length, ...plan);
+    a.doc.plannedSets = plannedSets;
+    for (const w of session.workouts) if (w.id === a.id) { w.plan = a.doc.plan; w.plannedSets = plannedSets; }
+    const { id, ...data } = a.doc;
+    track(store.saveWorkout(session.user.uid, id, data));
+    return true;
   },
 
   /** Ends the workout. Returns the summary, or null if nothing was logged (the workout is then discarded). */

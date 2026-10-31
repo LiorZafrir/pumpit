@@ -1,5 +1,6 @@
 // Service worker: caches the app shell. Bump VERSION on every release so clients refresh.
-const VERSION = 'pumpit-v12';
+const VERSION = 'pumpit-v13';
+const MEDIA_CACHE = 'pumpit-media-v1';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -23,7 +24,11 @@ const SHELL = [
   './js/logic/progression.js',
   './js/logic/workout-state.js',
   './js/logic/streak.js',
+  './js/logic/swap.js',
   './js/data/local-exercises.js',
+  './js/data/exercise-guides.js',
+  './js/data/exercise-media.js',
+  './js/ui/exercise-media.js',
   './js/ui/dom.js',
   './js/ui/icons.js',
   './js/ui/theme.js',
@@ -52,7 +57,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => !k.startsWith(VERSION) && k !== MEDIA_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -64,6 +69,17 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+
+  if (url.origin === self.location.origin && url.pathname.includes('/assets/exercises/')) {
+    // Exercise pictures never change at a given path: cache first, kept across app versions.
+    event.respondWith(
+      caches.open(MEDIA_CACHE).then((cache) => cache.match(request).then((hit) => hit || fetch(request).then((response) => {
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+      })))
+    );
+    return;
+  }
 
   if (url.origin === self.location.origin) {
     // Network first so updates show up; fall back to cache when offline.

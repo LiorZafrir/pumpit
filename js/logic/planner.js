@@ -67,13 +67,17 @@ export function planWorkout({ sessionType, location, goal, level, injuries = [],
     used.add(pick.id);
     exercises.push(prescribe(pick, scheme, level));
   }
-
   return {
     sessionType,
     location,
     exercises,
     plannedSets: exercises.reduce((sum, e) => sum + e.sets, 0)
   };
+}
+
+/** Sets, reps or hold time for one exercise, as `planWorkout` would give it for this goal and level. */
+export function prescribeExercise(exercise, goal, level) {
+  return prescribe(exercise, SCHEMES[goal] || SCHEMES.fit, level);
 }
 
 function prescribe(exercise, scheme, level) {

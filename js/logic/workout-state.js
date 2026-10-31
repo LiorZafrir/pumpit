@@ -10,6 +10,11 @@ export function setDocId(workoutId, exerciseIndex, setIndex) {
   return `${workoutId}_${exerciseIndex}_${setIndex}`;
 }
 
+/** A plan item as stored in the workout document (names and muscles come from the catalog, not Firestore). */
+export function toStoredPlanItem(p) {
+  return without({ exerciseId: p.exerciseId, sets: p.sets, repsMin: p.repsMin, repsMax: p.repsMax, durationSec: p.durationSec });
+}
+
 /** The workouts/{id} document to create when a workout starts. Only fields the rules allow. */
 export function buildWorkoutDoc({ now, location, title, sessionType, sessionIndex, plan }) {
   return {
@@ -18,7 +23,7 @@ export function buildWorkoutDoc({ now, location, title, sessionType, sessionInde
     title,
     sessionType,
     sessionIndex,
-    plan: plan.map((p) => without({ exerciseId: p.exerciseId, sets: p.sets, repsMin: p.repsMin, repsMax: p.repsMax, durationSec: p.durationSec })),
+    plan: plan.map(toStoredPlanItem),
     startedAt: now,
     plannedSets: plan.reduce((sum, p) => sum + p.sets, 0),
     completedSets: 0,
