@@ -55,7 +55,7 @@
         ]
       },
       {
-        "source": "{/,/index.html}",
+        "source": "{/,/index.html,/legal.html}",
         "headers": [
           {
             "key": "X-Frame-Options",

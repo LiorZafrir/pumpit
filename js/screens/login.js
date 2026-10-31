@@ -1,6 +1,7 @@
 import { h } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { describeAuthError, signInWithGoogle } from '../auth.js';
+import { LEGAL_URL } from '../logic/consent.js';
 
 export function render({ initialError } = {}) {
   const errorSlot = h('div', { role: 'alert', 'aria-live': 'assertive' });
@@ -32,6 +33,9 @@ export function render({ initialError } = {}) {
       h('h1', { class: 'display login-title' }, 'PumpIt'),
       h('p', { class: 'muted' }, 'תוכנית אימונים שמתאימה את עצמה אליך')
     ),
-    h('div', { class: 'login-actions' }, errorSlot, button)
+    h('div', { class: 'login-actions' }, errorSlot, button,
+      h('p', { class: 'muted small legal-note' }, 'לפני השימוש נבקש ממך לאשר את ',
+        h('a', { class: 'inline-link', href: `${LEGAL_URL}#terms` }, 'תנאי השימוש'), ' ואת ',
+        h('a', { class: 'inline-link', href: `${LEGAL_URL}#privacy` }, 'מדיניות הפרטיות'), '.'))
   );
 }

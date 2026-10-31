@@ -399,3 +399,18 @@
 .drop-row { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .drop-head { display: flex; align-items: center; justify-content: space-between; }
 .drop-row .step-btn { width: 52px; height: 52px; }
+
+/* ---- consent and legal links ---- */
+.consent { min-height: calc(100dvh - 40px); gap: 14px; }
+.consent-card { display: flex; flex-direction: column; gap: 10px; padding: 18px; }
+.consent-head { display: flex; align-items: center; gap: 10px; color: var(--accent); }
+.consent-head h2 { font-size: 17px; }
+.consent-list { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--text-2); font-size: 15px; }
+.consent-check { display: flex; gap: 12px; align-items: flex-start; padding: 6px 2px; color: var(--text-2); font-size: 15px; cursor: pointer; }
+.check-input { flex: none; width: 24px; height: 24px; margin: 1px 0 0; accent-color: var(--accent); }
+.consent-foot { text-align: center; }
+.inline-link { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.legal-note { text-align: center; }
+.link-row { display: flex; align-items: center; justify-content: space-between; min-height: 48px; color: var(--text); }
+.link-row + .link-row { border-block-start: 1px solid var(--line); }
+.link-row svg { transform: scaleX(-1); color: var(--muted); }

@@ -8,6 +8,9 @@ import { formatClock } from '../ui/labels.js';
 import { describeAuthError, signOutUser } from '../auth.js';
 import { GOALS, INJURY_AREAS, LEVELS, RANGES } from '../logic/onboarding.js';
 import { GEAR, REST, STYLES, detailErrors, detailsPatch, settingsOf } from '../logic/settings.js';
+import { LEGAL_URL } from '../logic/consent.js';
+import { exportFileName } from '../logic/export.js';
+import { saveJsonFile } from '../ui/download.js';
 
 const THEME_LABELS = { lime: 'ירוק ליים', blue: 'כחול', pink: 'ורוד', orange: 'כתום', red: 'אדום', yellow: 'צהוב', purple: 'סגול' };
 const GEAR_LABELS = { dumbbells: 'משקולות יד', pullupBar: 'מוט מתח' };
@@ -42,7 +45,7 @@ function numberField(label, unit, value, { step = '1', min, max, mode = 'numeric
 }
 
 /**
- * @param {{ user: object, profile: object, actions: { updateProfile: Function, deleteAccount: Function } }} ctx
+ * @param {{ user: object, profile: object, actions: { updateProfile: Function, deleteAccount: Function, exportData: Function } }} ctx
  */
 export function render({ user, profile, actions }) {
   const settings = settingsOf(profile);
@@ -168,6 +171,25 @@ export function render({ user, profile, actions }) {
     detailMsg.replaceChildren(h('div', { class: 'ok-msg', role: 'status' }, icon('check', { size: 20 }), h('span', null, 'הפרטים נשמרו.')));
   });
 
+  // ---- privacy and documents ----
+
+  const legalLink = (hash, text) => h('a', { class: 'link-row', href: `${LEGAL_URL}#${hash}` }, h('span', null, text), icon('arrowRight', { size: 20 }));
+  const exportMsg = h('div', { 'aria-live': 'polite' });
+  const exportBtn = h('button', { class: 'btn btn-ghost', type: 'button' }, 'הורדת הנתונים שלי');
+  exportBtn.addEventListener('click', async () => {
+    exportBtn.disabled = true;
+    exportMsg.replaceChildren(h('p', { class: 'muted small' }, 'מכין את הקובץ...'));
+    try {
+      flush();
+      const result = await saveJsonFile(exportFileName(), await actions.exportData());
+      exportMsg.replaceChildren(...(result === 'cancelled' ? [] : [h('div', { class: 'ok-msg', role: 'status' }, icon('check', { size: 20 }), h('span', null, 'הקובץ מוכן.'))]));
+    } catch {
+      exportMsg.replaceChildren(errorLine('ההורדה נכשלה. צריך חיבור לאינטרנט. נסה שוב.'));
+    } finally {
+      exportBtn.disabled = false;
+    }
+  });
+
   // ---- account ----
 
   const signOutBtn = h('button', { class: 'btn btn-ghost', type: 'button' }, icon('logout', { size: 20 }), 'התנתקות');
@@ -234,6 +256,11 @@ export function render({ user, profile, actions }) {
       select('ימים בשבוע', [2, 3, 4, 5, 6].map((n) => [n, String(n)]), 'daysPerWeek', Number),
       h('div', { class: 'field' }, h('span', { class: 'muted small' }, 'אזורים רגישים'), h('div', { class: 'chips', role: 'group', 'aria-label': 'אזורים רגישים' }, ...chips)),
       detailMsg, saveDetails),
+
+    section('פרטיות ומסמכים',
+      h('div', null, legalLink('privacy', 'מדיניות פרטיות'), legalLink('terms', 'תנאי שימוש'), legalLink('accessibility', 'הצהרת נגישות')),
+      h('p', { class: 'muted small' }, 'קובץ עם כל מה שנשמר עליך: פרופיל, אימונים, סטים ומשקל.'),
+      exportMsg, exportBtn),
 
     signOutBtn,
     section('מחיקת חשבון', h('p', { class: 'muted small' }, 'מוחק את כל הנתונים שלך ואת החשבון.'), deleteBtn));

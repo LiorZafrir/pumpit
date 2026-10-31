@@ -22,7 +22,8 @@ service cloud.firestore {
 
     function validProfile(d) {
       return d.keys().hasOnly(['name','sex','age','heightCm','weightKg','goal','level',
-               'daysPerWeek','injuries','theme','lastLocation','settings','createdAt','updatedAt'])
+               'daysPerWeek','injuries','theme','lastLocation','settings','consentVersion','consentAt',
+               'createdAt','updatedAt'])
         && (!('name' in d) || str(d.name, 60))
         && (!('sex' in d) || d.sex in ['m','f'])
         && (!('age' in d) || num(d.age, 13, 100))
@@ -35,6 +36,8 @@ service cloud.firestore {
         && (!('theme' in d) || d.theme in ['lime','blue','pink','orange','red','yellow','purple'])
         && (!('lastLocation' in d) || d.lastLocation in ['gym','home'])
         && (!('settings' in d) || validSettings(d.settings))
+        && (!('consentVersion' in d) || (str(d.consentVersion, 20) && d.consentVersion.size() > 0))
+        && (!('consentAt' in d) || when(d.consentAt))
         && (!('createdAt' in d) || when(d.createdAt))
         && (!('updatedAt' in d) || when(d.updatedAt));
     }

@@ -4,6 +4,7 @@ import { clearDeletePending, consumeDeletePending, finishRedirect, watchAuth } f
 import { createProfile } from './store.js';
 import { actions, clearSession, finishDeletion, loadAll, onSyncError, planNext, session } from './session.js';
 import { buildProfile, isProfileComplete } from './logic/onboarding.js';
+import { consentFields, hasConsent } from './logic/consent.js';
 import { activeWorkout } from './logic/streak.js';
 import { h } from './ui/dom.js';
 import { icon } from './ui/icons.js';
@@ -12,6 +13,7 @@ import { preventDoubleTapZoom } from './ui/touch.js';
 
 const SCREENS = {
   login: () => import('./screens/login.js'),
+  consent: () => import('./screens/consent.js'),
   onboarding: () => import('./screens/onboarding.js'),
   home: () => import('./screens/home.js'),
   workout: () => import('./screens/workout.js'),
@@ -25,8 +27,8 @@ const NAV = [
   { name: 'progress', label: 'התקדמות', icon: 'chart' },
   { name: 'profile', label: 'פרופיל', icon: 'user' }
 ];
-const FULL_SCREEN = new Set(['login', 'onboarding', 'workout', 'summary']);
-const TITLES = { login: 'PumpIt', onboarding: 'PumpIt · שאלון', workout: 'PumpIt · אימון', summary: 'PumpIt · סיכום' };
+const FULL_SCREEN = new Set(['login', 'consent', 'onboarding', 'workout', 'summary']);
+const TITLES = { login: 'PumpIt', consent: 'PumpIt · לפני שמתחילים', onboarding: 'PumpIt · שאלון', workout: 'PumpIt · אימון', summary: 'PumpIt · סיכום' };
 
 const root = document.getElementById('app');
 const nav = document.getElementById('bottom-nav');
@@ -36,6 +38,8 @@ let authReady = false;
 let redirectError = null;
 let profileState = 'idle'; // idle | loading | ready | error
 let renderToken = 0;
+// A new user accepts before onboarding; the acceptance is written together with the profile at the end.
+let pendingConsent = null;
 
 const navigate = (name) => { location.hash = `#/${name}`; };
 
@@ -79,12 +83,20 @@ function loadErrorScreen() {
 }
 
 async function submitOnboarding(answers) {
-  const data = buildProfile(answers, { name: user.displayName });
+  const data = { ...buildProfile(answers, { name: user.displayName }), ...(pendingConsent || consentFields()) };
   await createProfile(user.uid, data); // throws on failure; the onboarding screen shows the error
+  pendingConsent = null;
   actions.setProfile(data);
   actions.logBodyWeight(data.weightKg); // the first point of the body-weight chart (not awaited, works offline)
   applyTheme(data.theme);
   history.replaceState(null, '', '#/home');
+  route();
+}
+
+// New user: remember the acceptance and go on to onboarding. Existing user: record it on the profile.
+function acceptConsent() {
+  if (isProfileComplete(session.profile)) actions.updateProfile(consentFields());
+  else pendingConsent = consentFields();
   route();
 }
 
@@ -102,11 +114,13 @@ async function route() {
   } else if (profileState === 'error') {
     showFullScreen(loadErrorScreen());
     return;
+  } else if (!hasConsent(session.profile) && !pendingConsent) {
+    name = 'consent';
   } else if (!isProfileComplete(session.profile)) {
     name = 'onboarding';
   } else {
     name = currentName();
-    if (name === 'login' || name === 'onboarding') name = 'home';
+    if (name === 'login' || name === 'consent' || name === 'onboarding') name = 'home';
     try {
       if (name === 'workout' && !(await actions.resume())) name = 'home';
     } catch {
@@ -132,7 +146,8 @@ async function route() {
     actions,
     navigate,
     initialError: redirectError,
-    onSubmit: submitOnboarding
+    onSubmit: submitOnboarding,
+    onConsent: acceptConsent
   });
   redirectError = null;
 
@@ -202,6 +217,7 @@ if (redirectError) clearDeletePending();
 watchAuth((u) => {
   user = u;
   authReady = true;
+  pendingConsent = null;
   clearSession();
   if (u && consumeDeletePending()) {
     profileState = 'idle';

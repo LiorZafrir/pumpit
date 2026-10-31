@@ -13,6 +13,7 @@ import { recommendedSplit } from './logic/split.js';
 import { alternativesFor, swapPlanItem } from './logic/swap.js';
 import { activeWorkout, lastFinished } from './logic/streak.js';
 import { buildSetDoc, buildWorkoutDoc, finishPatch, setDocId } from './logic/workout-state.js';
+import { buildExport } from './logic/export.js';
 import { SESSION_TITLES } from './ui/labels.js';
 
 export const session = {
@@ -168,6 +169,13 @@ export const actions = {
   updateProfile(patch) {
     session.profile = applyPatch(session.profile, patch);
     track(store.updateProfile(session.user.uid, patch));
+  },
+
+  /** Everything stored about the user, ready to be saved as a JSON file. Needs a connection. */
+  async exportData() {
+    const u = session.user;
+    const data = await store.exportAllUserData(u.uid);
+    return buildExport({ uid: u.uid, email: u.email, name: u.displayName }, data);
   },
 
   /** Confirms the sign-in with Google, then deletes all data and the account. Returns 'redirect' if the page is leaving. */

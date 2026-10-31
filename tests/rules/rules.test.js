@@ -342,3 +342,24 @@ describe('short workouts, supersets and drop sets', () => {
     await assertFails(set([{ reps: 5 }]));
   });
 });
+
+describe('consent to the terms and privacy policy', () => {
+  const profilePath = `users/${ALICE}`;
+
+  it('a new profile with the consent fields, and a later re-acceptance, are accepted', async () => {
+    const { buildProfile } = await import('../../js/logic/onboarding.js');
+    const { consentFields } = await import('../../js/logic/consent.js');
+    const { serverTimestamp } = await import('firebase/firestore');
+    const profile = buildProfile({ sex: 'm', age: 37, heightCm: 178, weightKg: 80, goal: 'fit', level: 'mid', daysPerWeek: 4, injuries: [] }, { name: 'Lior' });
+    await assertSucceeds(setDoc(doc(alice(), profilePath), { ...profile, ...consentFields(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(alice(), profilePath), { ...consentFields(), updatedAt: serverTimestamp() }));
+  });
+
+  it('rejects malformed consent fields', async () => {
+    await seed(profilePath, { age: 30 });
+    await assertFails(updateDoc(doc(alice(), profilePath), { consentVersion: '' }));
+    await assertFails(updateDoc(doc(alice(), profilePath), { consentVersion: 'x'.repeat(21) }));
+    await assertFails(updateDoc(doc(alice(), profilePath), { consentVersion: 1 }));
+    await assertFails(updateDoc(doc(alice(), profilePath), { consentAt: 'yesterday' }));
+  });
+});

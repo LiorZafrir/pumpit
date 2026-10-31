@@ -126,3 +126,16 @@ export async function deleteAllUserData(uid) {
   }
   await deleteDoc(doc(db, 'users', uid));
 }
+
+// ---- data export ("download my data") ----
+
+/** Everything stored for the user: the profile and every document in each sub-collection. */
+export async function exportAllUserData(uid) {
+  const profileSnap = await getDoc(doc(db, 'users', uid));
+  const out = { profile: profileSnap.exists() ? profileSnap.data() : null };
+  for (const name of USER_COLLECTIONS) {
+    const snap = await getDocs(col(uid, name));
+    out[name] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
+  return out;
+}

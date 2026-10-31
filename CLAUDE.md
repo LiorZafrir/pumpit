@@ -301,3 +301,12 @@ service cloud.firestore {
   3. להדביק את ה-Site key ב-`appCheckSiteKey`, לפרוס, ולפתוח את האפליקציה.
   4. App Check › APIs › Cloud Firestore: לבדוק ב-Metrics שרוב הבקשות "Verified". **רק אז** ללחוץ Enforce (וגם על Authentication אם רוצים). Enforce לפני שהמדדים תקינים ינעל את כולם בחוץ.
   5. פיתוח מקומי: ב-localhost נוצר debug token שמודפס בקונסול. לרשום אותו ב-App Check › Apps › Manage debug tokens.
+
+## פרטיות, תנאי שימוש ונגישות
+
+- **`legal.html`**: עמוד סטטי (בלי סקריפטים, CSP משלו) עם שלושה חלקים: `#privacy`, `#terms` (כולל אזהרת בריאות), `#accessibility`. העיצוב ב-`css/legal.css`. נגיש גם בלי התחברות. איש הקשר ורכז הנגישות: ליאור, zafrir1986@gmail.com.
+- **אישור תנאים:** `logic/consent.js` (טהור) מגדיר `CONSENT_VERSION`. הנתב מציג את `screens/consent.js` כשאין בפרופיל `consentVersion` עדכני: למשתמש חדש לפני השאלון (האישור נשמר בזיכרון ונכתב יחד עם הפרופיל בסוף השאלון), ולמשתמש קיים פעם אחת, ואז `updateProfile`. בשדות: `consentVersion` (מחרוזת עד 20) ו-`consentAt` (מספר, ms).
+- **שינוי מהותי במסמכים:** לעדכן את התאריך ב-`legal.html` ולהעלות את `CONSENT_VERSION`. כולם יתבקשו לאשר מחדש.
+- **הורדת הנתונים שלי:** במסך הפרופיל. `store.exportAllUserData` קורא את הפרופיל וכל תתי-האוספים, `logic/export.js` ממיר Timestamps ל-ISO, ו-`ui/download.js` פותח את חלון השיתוף כשאפשר לשתף קבצים (iOS, אנדרואיד), אחרת מוריד קובץ JSON. דורש חיבור.
+- **חוקים:** `consentVersion` ו-`consentAt` נוספו ל-`validProfile`. **צריך לפרוס את החוקים לפני האתר**, אחרת שמירת הפרופיל של משתמש חדש תידחה.
+- **לא נבדק כאן:** בדיקות החוקים באמולטור (לא ניתן היה להוריד את האמולטור בסביבת הפיתוח בענן), והזרימה המלאה מול Firebase אמיתי.
