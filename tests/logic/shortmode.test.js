@@ -1,7 +1,7 @@
-import test from 'node:test';
+import test, { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { estimateSeconds, pairExercises, shortRestSec, shortenPlan } from '../../js/logic/shortmode.js';
-import { planWorkout } from '../../js/logic/planner.js';
+import { LONG_OPTIONS, MAX_EXERCISES, MAX_SETS, estimateSeconds, growPlan, pairExercises, shortRestSec, shortenPlan } from '../../js/logic/shortmode.js';
+import { SLOTS, planWorkout } from '../../js/logic/planner.js';
 
 const item = (id, muscle, sets = 3) => ({ exerciseId: id, muscle, sets, repsMin: 8, repsMax: 12 });
 const base = { goal: 'mass', level: 'adv', injuries: [] };
@@ -87,4 +87,57 @@ test('alwaysPair pairs even when time is not an issue', () => {
   const { exercises } = planWorkout({ ...base, sessionType: 'push', location: 'gym' });
   const out = shortenPlan(exercises, 90, 90, { alwaysPair: true });
   assert.ok(out.exercises.some((e) => e.pair));
+});
+
+test('a reserve (the warm-up) is taken off the available time', () => {
+  const { exercises } = planWorkout({ ...base, sessionType: 'push', location: 'gym' });
+  const withReserve = shortenPlan(exercises, 30, 90, { reserveSec: 300 });
+  assert.ok(withReserve.estimateSec + 300 <= 30 * 60);
+});
+
+describe('growPlan', () => {
+  const baseOf = (type) => planWorkout({ ...base, level: 'mid', sessionType: type, location: 'gym' }).exercises;
+  const wide = (type) => planWorkout({ ...base, level: 'mid', sessionType: type, location: 'gym', maxExercises: 10, slots: [...SLOTS[type], ...SLOTS[type]] }).exercises;
+
+  it('a long workout is longer than the normal one and still fits the time', () => {
+    const normal = baseOf('upper');
+    const all = wide('upper');
+    for (const minutes of LONG_OPTIONS) {
+      const out = growPlan(normal, all.slice(normal.length), minutes, 90);
+      assert.ok(out.estimateSec <= minutes * 60, `${minutes}: ${out.estimateSec}`);
+      assert.ok(out.estimateSec > estimateSeconds(normal, 90), `${minutes} is not longer`);
+    }
+  });
+
+  it('more minutes never give a shorter workout, and the limits hold', () => {
+    const normal = baseOf('fullBody');
+    const extras = wide('fullBody').slice(normal.length);
+    const a = growPlan(normal, extras, 75, 90);
+    const b = growPlan(normal, extras, 90, 90);
+    assert.ok(b.estimateSec >= a.estimateSec);
+    for (const out of [a, b]) {
+      assert.ok(out.exercises.length <= MAX_EXERCISES);
+      assert.ok(out.exercises.every((e) => e.sets <= MAX_SETS));
+    }
+  });
+
+  it('keeps the base exercises first and in order, and does not change its input', () => {
+    const normal = baseOf('push');
+    const snapshot = JSON.stringify(normal);
+    const out = growPlan(normal, wide('push').slice(normal.length), 90, 90);
+    assert.deepEqual(out.exercises.slice(0, normal.length).map((e) => e.exerciseId), normal.map((e) => e.exerciseId));
+    assert.equal(JSON.stringify(normal), snapshot);
+  });
+
+  it('with the reserve taken off it never overshoots', () => {
+    const normal = baseOf('lower');
+    const out = growPlan(normal, wide('lower').slice(normal.length), 75, 90, { reserveSec: 330 });
+    assert.ok(out.estimateSec + 330 <= 75 * 60);
+  });
+
+  it('pairs when asked to', () => {
+    const normal = baseOf('upper');
+    const out = growPlan(normal, wide('upper').slice(normal.length), 90, 90, { alwaysPair: true });
+    assert.ok(out.exercises.some((e) => e.pair));
+  });
 });

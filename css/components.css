@@ -399,3 +399,14 @@
 .drop-row { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .drop-head { display: flex; align-items: center; justify-content: space-between; }
 .drop-row .step-btn { width: 52px; height: 52px; }
+
+/* choosing the day's focus, long workouts, warm-up */
+.focus-btn { display: flex; align-items: center; gap: 10px; min-height: 52px; padding-inline: 14px; border-radius: var(--r-md); background: var(--card); border: 1px solid var(--line); color: var(--text); text-align: start; width: 100%; }
+.focus-btn[disabled] { opacity: 0.6; }
+.focus-label { flex: 1; font-weight: 500; min-width: 0; }
+.focus-change { color: var(--accent); font-weight: 700; font-size: 14px; }
+.duration-row .segmented { max-width: 100%; }
+.duration-row .seg { padding-inline: 10px; min-width: 40px; }
+.warmup-hint { color: var(--text-3); font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
+.warmup-steps { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--text-2); }
+.warmup-count { color: var(--accent); font-weight: 700; }

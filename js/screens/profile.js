@@ -211,6 +211,7 @@ export function render({ user, profile, actions }) {
       h('p', { class: 'muted small' }, 'הצבע משתנה מיד, כך שאפשר לראות איך זה נראה.')),
 
     section('אימון',
+      switchRow('חימום לפני האימון', 'כמה דקות של חימום מותאם לשרירים של היום', settings.warmup, (on) => save({ 'settings.warmup': on })),
       h('div', { class: 'row setting-row' },
         h('span', { class: 'setting-text' }, h('span', null, 'זמן מנוחה בין סטים'), h('span', { class: 'small muted' }, 'ברירת מחדל לכל האימונים')),
         h('div', { class: 'rest-stepper', dir: 'ltr' }, restBtn('minus', 'הפחת', -REST.step), restValue, restBtn('plus', 'הוסף', REST.step)))),

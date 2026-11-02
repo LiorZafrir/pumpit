@@ -6,7 +6,7 @@ export const GEAR = ['dumbbells', 'pullupBar'];
 export const STYLES = ['regular', 'calisthenics', 'military'];
 
 export const DEFAULT_SETTINGS = Object.freeze({
-  restSec: 90, homeGear: [], homeStyle: 'regular', superset: false, dropset: false
+  restSec: 90, homeGear: [], homeStyle: 'regular', superset: false, dropset: false, warmup: true
 });
 
 /** The settings to use for a profile: stored values where valid, defaults elsewhere. */
@@ -18,7 +18,8 @@ export function settingsOf(profile) {
     homeGear: Array.isArray(s.homeGear) ? GEAR.filter((g) => s.homeGear.includes(g)) : [],
     homeStyle: STYLES.includes(s.homeStyle) ? s.homeStyle : DEFAULT_SETTINGS.homeStyle,
     superset: s.superset === true,
-    dropset: s.dropset === true
+    dropset: s.dropset === true,
+    warmup: s.warmup !== false
   };
 }
 

@@ -1,5 +1,5 @@
 // Service worker: caches the app shell. Bump VERSION on every release so clients refresh.
-const VERSION = 'pumpit-v20';
+const VERSION = 'pumpit-v21';
 const MEDIA_CACHE = 'pumpit-media-v1';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
@@ -25,12 +25,16 @@ const SHELL = [
   './js/logic/workout-state.js',
   './js/logic/streak.js',
   './js/logic/swap.js',
+  './js/logic/focus.js',
+  './js/logic/compose.js',
+  './js/logic/warmup.js',
   './js/logic/progress.js',
   './js/logic/settings.js',
   './js/logic/shortmode.js',
   './js/data/local-exercises.js',
   './js/data/exercise-guides.js',
   './js/data/exercise-media.js',
+  './js/data/warmups.js',
   './js/ui/exercise-media.js',
   './js/ui/chart.js',
   './js/ui/dom.js',

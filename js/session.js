@@ -3,15 +3,13 @@
 import * as store from './store.js';
 import { deleteCurrentUser, reauthenticate } from './auth.js';
 import { exerciseById } from './data/local-exercises.js';
-import { nextSessionAfter, planWorkout } from './logic/planner.js';
 import { periodStart } from './logic/progress.js';
-import { estimateSeconds, pairExercises, shortRestSec, shortenPlan } from './logic/shortmode.js';
+import { composeWorkout } from './logic/compose.js';
 import { applyPatch, settingsOf } from './logic/settings.js';
 import { toDateKey } from './logic/week.js';
 import { evaluateExercise } from './logic/progression.js';
-import { recommendedSplit } from './logic/split.js';
 import { alternativesFor, swapPlanItem } from './logic/swap.js';
-import { activeWorkout, lastFinished } from './logic/streak.js';
+import { activeWorkout } from './logic/streak.js';
 import { buildSetDoc, buildWorkoutDoc, finishPatch, setDocId } from './logic/workout-state.js';
 import { SESSION_TITLES } from './ui/labels.js';
 
@@ -70,42 +68,9 @@ export async function loadAll(user) {
   return profile;
 }
 
-export function splitFor(profile) {
-  const days = Math.min(6, Math.max(2, Number(profile.daysPerWeek) || 3));
-  return recommendedSplit(days);
-}
-
-/** The session that comes next and its exercises, for a given location. */
-/**
- * The next session and its exercises. With `shortMin` (20, 30 or 45) the plan is trimmed to fit and paired into
- * supersets; with the superset setting on, a normal plan is paired too. `estimateSec` is a rough length.
- */
-export function planNext(location, shortMin = null) {
-  const { profile } = session;
-  const settings = settingsOf(profile);
-  const next = nextSessionAfter(splitFor(profile), lastFinished(session.workouts)?.sessionIndex);
-  const plan = planWorkout({
-    sessionType: next.type, location, goal: profile.goal, level: profile.level,
-    injuries: Array.isArray(profile.injuries) ? profile.injuries : [], variant: next.variant,
-    gear: settings.homeGear, style: settings.homeStyle
-  });
-  let exercises = plan.exercises;
-  let rest = settings.restSec;
-  if (shortMin) {
-    const short = shortenPlan(exercises, shortMin, settings.restSec, { alwaysPair: settings.superset });
-    exercises = short.exercises;
-    rest = short.restSec;
-  } else if (settings.superset) {
-    exercises = pairExercises(exercises);
-  }
-  return {
-    next,
-    plan: {
-      ...plan, exercises, shortMin: shortMin || null,
-      plannedSets: exercises.reduce((sum, e) => sum + e.sets, 0),
-      estimateSec: estimateSeconds(exercises, rest)
-    }
-  };
+/** The next workout for the signed-in user (see composeWorkout). */
+export function planNext(location, options = {}) {
+  return composeWorkout({ profile: session.profile, workouts: session.workouts, location, ...options });
 }
 
 export const actions = {
@@ -124,14 +89,15 @@ export const actions = {
     }
   },
 
-  start(location, { shortMin = null } = {}) {
+  start(location, { minutes = null, focus = [] } = {}) {
     if (session.active) return session.active;
-    const { next, plan } = planNext(location, shortMin);
+    const { next, plan } = planNext(location, { minutes, focus });
     if (!plan.exercises.length) throw new Error('no exercises for this workout');
     const id = newId();
     const doc = buildWorkoutDoc({
-      now: Date.now(), location, title: SESSION_TITLES[next.type],
-      sessionType: next.type, sessionIndex: next.index, plan: plan.exercises, shortMin: shortMin || undefined
+      now: Date.now(), location, title: next.title || SESSION_TITLES[next.type],
+      sessionType: next.type, sessionIndex: next.index, plan: plan.exercises,
+      shortMin: plan.shortMin || undefined, longMin: plan.longMin || undefined, focus: next.focus
     });
     session.workouts = [{ id, ...doc }, ...session.workouts];
     session.active = { id, doc: { id, ...doc }, sets: [] };

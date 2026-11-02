@@ -119,6 +119,16 @@ describe('drop sets and short workouts in documents', () => {
     assert.equal(timed.drops, undefined);
   });
 
+  it('a custom session stores its focus and no session index; the other fields are optional', () => {
+    const base = { now: 1, location: 'gym', title: 'אימון חזה', sessionType: 'custom', plan };
+    const doc = buildWorkoutDoc({ ...base, focus: ['chest'], longMin: 75 });
+    assert.deepEqual(doc.focus, ['chest']);
+    assert.equal(doc.longMin, 75);
+    assert.equal('sessionIndex' in doc, false);
+    assert.equal('focus' in buildWorkoutDoc({ ...base, focus: [] }), false);
+    assert.equal('longMin' in buildWorkoutDoc(base), false);
+  });
+
   it('buildWorkoutDoc stores shortMin only when given', () => {
     const base = { now: 1, location: 'gym', title: 't', sessionType: 'upper', sessionIndex: 0, plan };
     assert.equal('shortMin' in buildWorkoutDoc(base), false);
@@ -131,7 +141,7 @@ describe('documents', () => {
 
   it('buildWorkoutDoc has only allowed fields, no undefined values, and a local date', () => {
     const allowed = ['date', 'location', 'title', 'sessionType', 'sessionIndex', 'plan', 'startedAt', 'endedAt',
-      'durationSec', 'plannedSets', 'completedSets', 'volumeKg', 'status', 'shortMin'];
+      'durationSec', 'plannedSets', 'completedSets', 'volumeKg', 'status', 'shortMin', 'longMin', 'focus'];
     const doc = buildWorkoutDoc({ now, location: 'gym', title: 'אימון', sessionType: 'upper', sessionIndex: 0, plan });
     for (const [k, v] of Object.entries(doc)) {
       assert.ok(allowed.includes(k), k);

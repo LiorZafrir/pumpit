@@ -4,12 +4,14 @@ import { MUSCLE_LABELS, SESSION_TITLES } from '../ui/labels.js';
 import { exerciseById } from '../data/local-exercises.js';
 import { doneDates, doneThisWeek, weeklyStreak } from '../logic/streak.js';
 import { weekDays } from '../logic/week.js';
-import { SHORT_OPTIONS } from '../logic/shortmode.js';
+import { LONG_OPTIONS, SHORT_OPTIONS } from '../logic/shortmode.js';
+import { FOCUS_LABELS, FOCUS_OPTIONS, focusTitle, normalizeFocus } from '../logic/focus.js';
+import { openSheet } from '../ui/sheet.js';
 import { unlockAudio } from '../services/feedback.js';
 
 const DAY_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 const LOCATIONS = [['gym', 'חדר כושר'], ['home', 'בית']];
-const DURATIONS = [[null, 'מלא'], ...SHORT_OPTIONS.slice().reverse().map((m) => [m, String(m)])];
+const DURATIONS = [[null, 'רגיל'], ...[...SHORT_OPTIONS, ...LONG_OPTIONS].map((m) => [m, String(m)])];
 
 /** "כ-30 דק׳", rounded to 5 minutes. */
 function approxMinutes(sec) {
@@ -31,7 +33,8 @@ function dose(item) {
  */
 export function render({ user, profile, workouts, active, planNext, actions, navigate }) {
   let location = profile.lastLocation === 'home' ? 'home' : 'gym';
-  let shortMin = null; // chosen per workout, not remembered
+  let minutes = null; // chosen per workout, not remembered
+  let focus = []; // areas picked instead of the planned session, also per workout
 
   const days = Math.min(6, Math.max(2, Number(profile.daysPerWeek) || 3));
   const now = new Date();
@@ -49,6 +52,7 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
       h('span', { class: 'day-num num' }, String(d.dayOfMonth)))));
 
   const titleEl = h('h2', { class: 'workout-title' });
+  const focusLabel = h('span', { class: 'focus-label' });
   const metaEl = h('p', { class: 'muted small num' });
   const listEl = h('ul', { class: 'exercise-list' });
   const errorSlot = h('div', { role: 'alert' });
@@ -73,14 +77,15 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
   function drawPlan() {
     if (active) {
       titleEl.textContent = active.title || 'אימון פתוח';
-      metaEl.textContent = `אימון בתהליך${active.shortMin ? ` · קצר, ${active.shortMin} דק׳` : ''} · ${meta(active.plan.length, active.plannedSets)}`;
+      metaEl.textContent = `אימון בתהליך${active.shortMin ? ` · קצר, ${active.shortMin} דק׳` : active.longMin ? ` · ארוך, ${active.longMin} דק׳` : ''} · ${meta(active.plan.length, active.plannedSets)}`;
       listEl.replaceChildren(...rowsFor(active.plan));
       startBtn.textContent = 'המשך אימון';
       startBtn.disabled = false;
       return;
     }
-    const { next, plan } = planNext(location, shortMin);
-    titleEl.textContent = SESSION_TITLES[next.type];
+    const { next, plan } = planNext(location, { minutes, focus });
+    titleEl.textContent = next.title || SESSION_TITLES[next.type];
+    focusLabel.textContent = focus.length ? focusTitle(focus) : 'לפי התוכנית';
     metaEl.textContent = meta(plan.exercises.length, plan.plannedSets, ` · ${approxMinutes(plan.estimateSec)}`);
     listEl.replaceChildren(...(plan.exercises.length
       ? rowsFor(plan.exercises)
@@ -93,7 +98,7 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
     unlockAudio();
     errorSlot.replaceChildren();
     try {
-      if (!active) actions.start(location, { shortMin });
+      if (!active) actions.start(location, { minutes, focus });
       navigate('workout');
     } catch {
       errorSlot.replaceChildren(h('div', { class: 'error-msg' }, icon('alert', { size: 20 }), h('span', null, 'לא הצלחנו להתחיל את האימון. נסה שוב.')));
@@ -118,15 +123,40 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
   });
 
   const durationButtons = DURATIONS.map(([value, label]) => {
-    const btn = h('button', { class: 'seg', type: 'button', role: 'radio', 'aria-checked': String(shortMin === value), disabled: Boolean(active) }, label);
+    const btn = h('button', { class: 'seg', type: 'button', role: 'radio', 'aria-checked': String(minutes === value), disabled: Boolean(active) }, label);
     btn.addEventListener('click', () => {
-      if (shortMin === value) return;
-      shortMin = value;
+      if (minutes === value) return;
+      minutes = value;
       for (const b of durationButtons) b.setAttribute('aria-checked', String(b === btn));
       drawPlan();
     });
     return btn;
   });
+
+  function openFocusSheet() {
+    const sheet = openSheet({ title: 'מה מתאמנים היום?' });
+    const picked = new Set(normalizeFocus(focus));
+    const chips = FOCUS_OPTIONS.map((area) => {
+      const chip = h('button', { class: 'chip', type: 'button', 'aria-pressed': String(picked.has(area)) }, FOCUS_LABELS[area]);
+      chip.addEventListener('click', () => {
+        if (picked.has(area)) picked.delete(area); else picked.add(area);
+        chip.setAttribute('aria-pressed', String(picked.has(area)));
+      });
+      return chip;
+    });
+    const apply = h('button', { class: 'btn btn-primary', type: 'button' }, 'אישור');
+    const reset = h('button', { class: 'btn btn-ghost', type: 'button' }, 'חזרה לאימון לפי התוכנית');
+    apply.addEventListener('click', () => { focus = normalizeFocus([...picked]); sheet.close(); drawPlan(); });
+    reset.addEventListener('click', () => { focus = []; sheet.close(); drawPlan(); });
+    sheet.body.append(
+      h('p', { class: 'sheet-text' }, 'אפשר לבחור כמה אזורים ביחד. האימון הזה לא ישנה את סדר האימונים של התוכנית.'),
+      h('div', { class: 'chips', role: 'group', 'aria-label': 'אזורי אימון' }, ...chips),
+      h('div', { class: 'sheet-actions' }, apply, reset));
+  }
+
+  const focusBtn = h('button', { class: 'focus-btn', type: 'button', disabled: Boolean(active) },
+    h('span', { class: 'muted small' }, 'מה מתאמנים?'), focusLabel, h('span', { class: 'focus-change' }, 'שינוי'));
+  focusBtn.addEventListener('click', openFocusSheet);
 
   drawPlan();
 
@@ -142,8 +172,9 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
         h('span', { class: 'muted small' }, active ? 'אימון פתוח' : 'האימון של היום'),
         h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'מיקום האימון' }, ...segButtons)),
       errorSlot,
+      active ? null : focusBtn,
       active ? null : h('div', { class: 'row duration-row' },
-        h('span', { class: 'muted small' }, 'כמה זמן יש לך? (דקות)'),
+        h('span', { class: 'muted small' }, 'כמה זמן? (דקות)'),
         h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'משך האימון' }, ...durationButtons)),
       h('div', null, titleEl, metaEl),
       listEl,

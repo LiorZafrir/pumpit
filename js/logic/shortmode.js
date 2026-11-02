@@ -4,6 +4,9 @@
 // then a single rest. Plan items here need `muscle` (planWorkout gives it) and `sets`.
 
 export const SHORT_OPTIONS = [20, 30, 45];
+export const LONG_OPTIONS = [75, 90]; // minutes, for a long workout
+export const MAX_EXERCISES = 10; // firestore.rules allows 12 plan items
+export const MAX_SETS = 5;
 export const SET_SEC = 45; // one set including getting into position
 export const TRANSITION_SEC = 60; // moving to a new station or pair
 const MIN_REST_SEC = 30;
@@ -60,14 +63,14 @@ export function estimateSeconds(items, restSec) {
 }
 
 /**
- * Fits a plan into `minutes`, doing only as much as needed: shorter rests, then supersets (unless `alwaysPair`),
+ * Fits a plan into `minutes` (not counting `reserveSec`, e.g. a warm-up), doing only as much as needed: shorter rests, then supersets (unless `alwaysPair`),
  * then fewer sets (down to 2), then dropping the extra exercises for a muscle that already has one.
  * Every muscle of the day stays. If nothing fits, returns the shortest plan.
  * @returns {{ exercises: object[], restSec: number, estimateSec: number }}
  */
-export function shortenPlan(exercises, minutes, restSec, { alwaysPair = false } = {}) {
+export function shortenPlan(exercises, minutes, restSec, { alwaysPair = false, reserveSec = 0 } = {}) {
   const rest = shortRestSec(restSec);
-  const target = minutes * 60;
+  const target = minutes * 60 - reserveSec;
   const result = (items, pair = true) => {
     const exercisesOut = pair ? pairExercises(items) : items;
     return { exercises: exercisesOut, restSec: rest, estimateSec: estimateSeconds(exercisesOut, rest) };
@@ -97,4 +100,35 @@ export function shortenPlan(exercises, minutes, restSec, { alwaysPair = false } 
     best = result(items);
     if (best.estimateSec <= target) return best;
   }
+}
+
+/**
+ * Fills a long workout (more than an hour): adds the `extras` (more exercises for the same muscles, best first)
+ * while they still fit, then adds sets to the exercises one at a time, up to MAX_SETS. Normal rests.
+ * @returns {{ exercises: object[], restSec: number, estimateSec: number }}
+ */
+export function growPlan(base, extras, minutes, restSec, { alwaysPair = false, reserveSec = 0 } = {}) {
+  const target = minutes * 60 - reserveSec;
+  const shaped = (items) => (alwaysPair ? pairExercises(items) : items);
+  const fits = (items) => estimateSeconds(shaped(items), restSec) <= target;
+
+  let items = base.map((e) => ({ ...e, pair: undefined }));
+  for (const extra of extras) {
+    if (items.length >= MAX_EXERCISES) break;
+    const next = [...items, { ...extra, pair: undefined }];
+    if (!fits(next)) break;
+    items = next;
+  }
+
+  for (let grew = true; grew;) {
+    grew = false;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].sets >= MAX_SETS) continue;
+      const next = items.map((e, j) => (j === i ? { ...e, sets: e.sets + 1 } : e));
+      if (fits(next)) { items = next; grew = true; }
+    }
+  }
+
+  const exercises = shaped(items);
+  return { exercises, restSec, estimateSec: estimateSeconds(exercises, restSec) };
 }

@@ -10,6 +10,7 @@ import { guideFor } from '../data/exercise-guides.js';
 import { MAX_DROPS, nextUp, partnerOf, positionFrom, progressFraction } from '../logic/workout-state.js';
 import { settingsOf } from '../logic/settings.js';
 import { shortRestSec } from '../logic/shortmode.js';
+import { buildWarmup, warmupSetWeight } from '../logic/warmup.js';
 import { beep, keepAwake, releaseAwake, unlockAudio, vibrate } from '../services/feedback.js';
 
 const WEIGHT_STEP = 2.5;
@@ -117,10 +118,23 @@ export function render({ workout, states, actions, navigate, profile }) {
 
   const lastSetOf = (exerciseId) => workout.sets.filter((s) => s.exerciseId === exerciseId).at(-1) || null;
 
-  function shownWeight(exerciseId, state) {
+  function currentWeightKg(exerciseId, state) {
     const prev = lastSetOf(exerciseId);
-    const kgValue = prev ? prev.weightKg || 0 : state && typeof state.workingWeightKg === 'number' ? state.workingWeightKg : null;
+    return prev ? prev.weightKg || 0 : state && typeof state.workingWeightKg === 'number' ? state.workingWeightKg : null;
+  }
+
+  function shownWeight(exerciseId, state) {
+    const kgValue = currentWeightKg(exerciseId, state);
     return kgValue == null ? '—' : `${fmt(kgValue)} ק״ג`;
+  }
+
+  // A reminder before the first set of a weighted exercise (not logged anywhere).
+  function warmupSetHint(item, pos, state) {
+    if (!settings.warmup || pos.setIndex !== 0 || item.durationSec != null) return null;
+    const kgValue = warmupSetWeight(currentWeightKg(item.exerciseId, state));
+    if (kgValue == null) return null;
+    return h('p', { class: 'warmup-hint' }, icon('bolt', { size: 18 }),
+      h('span', null, `לפני הסט הראשון, סט חימום קל: ${kg(kgValue)} × 8-10. הוא לא נרשם.`));
   }
 
   function openLogSheet(pos) {
@@ -248,6 +262,7 @@ export function render({ workout, states, actions, navigate, profile }) {
         timed ? null : h('div', { class: 'tile' }, h('span', { class: 'muted small' }, 'משקל'),
           h('span', { class: 'tile-value num', dir: 'ltr' }, shownWeight(item.exerciseId, state)))),
       lastLine,
+      warmupSetHint(item, pos, state),
       guideBlock(item.exerciseId),
       h('div', { class: 'ob-actions' }, done, swapButton(pos.exerciseIndex)));
   }
@@ -296,6 +311,54 @@ export function render({ workout, states, actions, navigate, profile }) {
       list.append(row);
     }
     sheet.body.append(h('p', { class: 'sheet-text' }, 'בחר תרגיל חלופי לאותו שריר, שמתאים למיקום, לרמה ולאזורים הרגישים שלך.'), list);
+  }
+
+  // ---- warm-up ----
+
+  // Shown once, before the first set, unless turned off in the profile. Leaving and resuming shows it again until it is done.
+  const warmupMoves = settings.warmup && !workout.warmupDone && workout.sets.length === 0
+    ? buildWarmup(plan.map((p) => exerciseById(p.exerciseId)?.muscle).filter(Boolean))
+    : [];
+
+  function showWarmup() {
+    stopRest();
+    let index = 0;
+    const finish = () => { stopRest(); workout.warmupDone = true; showExercise(); };
+
+    function drawMove() {
+      stopRest();
+      const move = warmupMoves[index];
+      const last = index === warmupMoves.length - 1;
+      let endAt = Date.now() + move.sec * 1000;
+      let alerted = false;
+
+      const ring = createRing({ size: 220, stroke: 12 });
+      const clock = h('div', { class: 'rest-clock num', role: 'timer', 'aria-live': 'off' }, formatClock(move.sec));
+      const next = h('button', { class: 'btn btn-primary', type: 'button' }, last ? 'סיימתי, מתחילים באימון' : 'הבא');
+      const skip = h('button', { class: 'btn btn-ghost', type: 'button' }, 'דלג על החימום');
+      next.addEventListener('click', () => { if (last) finish(); else { index++; drawMove(); } });
+      skip.addEventListener('click', finish);
+
+      const tick = () => {
+        if (!root.isConnected) { stopRest(); return; }
+        const left = endAt - Date.now();
+        clock.textContent = formatClock(Math.ceil(Math.max(0, left) / 1000));
+        ring.set(left <= 0 ? 1 : left / (move.sec * 1000));
+        if (left <= 0 && !alerted) { alerted = true; beep(); vibrate([200]); }
+      };
+
+      root.replaceChildren(
+        h('header', { class: 'ob-head center' },
+          h('p', { class: 'muted small' }, 'חימום'),
+          h('h1', { class: 'ob-title' }, move.name),
+          h('p', { class: 'warmup-count num', dir: 'ltr' }, `${index + 1} / ${warmupMoves.length}`)),
+        h('div', { class: 'rest-ring' }, ring.el, clock),
+        h('ol', { class: 'warmup-steps card' }, ...move.steps.map((step) => h('li', null, step))),
+        h('div', { class: 'ob-actions' }, next, skip));
+      restTimer = setInterval(tick, 250);
+      tick();
+    }
+    drawMove();
   }
 
   // ---- rest view ----
@@ -366,6 +429,7 @@ export function render({ workout, states, actions, navigate, profile }) {
     tick();
   }
 
-  showExercise();
+  if (warmupMoves.length) showWarmup();
+  else showExercise();
   return root;
 }

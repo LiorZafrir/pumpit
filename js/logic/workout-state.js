@@ -15,7 +15,7 @@ export function toStoredPlanItem(p) {
 }
 
 /** The workouts/{id} document to create when a workout starts. Only fields the rules allow. */
-export function buildWorkoutDoc({ now, location, title, sessionType, sessionIndex, plan, shortMin }) {
+export function buildWorkoutDoc({ now, location, title, sessionType, sessionIndex, plan, shortMin, longMin, focus }) {
   return without({
     date: toDateKey(new Date(now)),
     location,
@@ -28,7 +28,9 @@ export function buildWorkoutDoc({ now, location, title, sessionType, sessionInde
     completedSets: 0,
     volumeKg: 0,
     status: 'active',
-    shortMin
+    shortMin,
+    longMin,
+    focus: Array.isArray(focus) && focus.length ? [...focus] : undefined
   });
 }
 

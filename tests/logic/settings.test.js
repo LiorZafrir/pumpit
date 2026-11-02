@@ -11,7 +11,9 @@ test('settingsOf falls back to defaults', () => {
 
 test('settingsOf keeps valid values and drops invalid ones', () => {
   const s = settingsOf({ settings: { restSec: 120, homeGear: ['dumbbells', 'rocket'], homeStyle: 'military', superset: true, dropset: 'yes' } });
-  assert.deepEqual(s, { restSec: 120, homeGear: ['dumbbells'], homeStyle: 'military', superset: true, dropset: false });
+  assert.deepEqual(s, { restSec: 120, homeGear: ['dumbbells'], homeStyle: 'military', superset: true, dropset: false, warmup: true });
+  assert.equal(settingsOf({ settings: { warmup: false } }).warmup, false);
+  assert.equal(settingsOf({ settings: { warmup: 'no' } }).warmup, true);
   assert.equal(settingsOf({ settings: { restSec: 5 } }).restSec, REST.min);
   assert.equal(settingsOf({ settings: { restSec: 9999 } }).restSec, REST.max);
   assert.equal(settingsOf({ settings: { homeStyle: 'x' } }).homeStyle, 'regular');

@@ -342,3 +342,29 @@ describe('short workouts, supersets and drop sets', () => {
     await assertFails(set([{ reps: 5 }]));
   });
 });
+
+describe('custom focus, long workouts and the warm-up setting', () => {
+  it('a custom long workout built by the app is accepted', async () => {
+    const { buildWorkoutDoc } = await import('../../js/logic/workout-state.js');
+    const plan = [{ exerciseId: 'local-bench-press', sets: 4, repsMin: 6, repsMax: 10 }];
+    const doc1 = buildWorkoutDoc({ now: Date.now(), location: 'gym', title: 'אימון חזה וגב', sessionType: 'custom', plan, longMin: 90, focus: ['chest', 'back'] });
+    await assertSucceeds(setDoc(doc(alice(), `users/${ALICE}/workouts/c1`), doc1));
+  });
+
+  it('only 75 or 90 minutes, at most 9 focus areas, and known session types', async () => {
+    const base = { date: '2026-01-01', location: 'gym', title: 'x', status: 'active', startedAt: 1 };
+    const w = (id, extra) => setDoc(doc(alice(), `users/${ALICE}/workouts/${id}`), { ...base, ...extra });
+    await assertSucceeds(w('a', { longMin: 75 }));
+    await assertFails(w('b', { longMin: 60 }));
+    await assertFails(w('c', { focus: Array.from({ length: 10 }, () => 'chest') }));
+    await assertFails(w('d', { focus: 'chest' }));
+    await assertFails(w('e', { sessionType: 'chaos' }));
+    await assertSucceeds(w('f', { sessionType: 'custom', focus: ['arms'] }));
+  });
+
+  it('the warm-up setting must be a boolean', async () => {
+    await seed(`users/${ALICE}`, { age: 30 });
+    await assertSucceeds(updateDoc(doc(alice(), `users/${ALICE}`), { 'settings.warmup': false }));
+    await assertFails(updateDoc(doc(alice(), `users/${ALICE}`), { 'settings.warmup': 'no' }));
+  });
+});

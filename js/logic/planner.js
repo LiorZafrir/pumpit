@@ -19,6 +19,11 @@ const SCHEMES = {
   fit: { sets: 3, repsMin: 8, repsMax: 12 },
   loss: { sets: 3, repsMin: 12, repsMax: 15 }
 };
+/** How many exercises a workout has by default at this level. */
+export function exerciseLimit(level) {
+  return EXERCISES_BY_LEVEL[level] ?? EXERCISES_BY_LEVEL.beg;
+}
+
 const HOLD_SECONDS = { beg: 30, mid: 40, adv: 60 };
 
 /**
@@ -57,14 +62,16 @@ export function nextSessionAfter(split, lastIndex) {
  * @param {number} [p.variant] 0 for the first session of a type in the cycle, 1 for the second...
  * @param {string[]} [p.gear] equipment available at home
  * @param {string} [p.style] home style: regular | calisthenics | military
+ * @param {string[]} [p.slots] muscle slots to use instead of the session type's (a chosen focus)
+ * @param {number} [p.maxExercises] exercise limit instead of the level's
  * @param {object[]} [catalog]
  */
-export function planWorkout({ sessionType, location, goal, level, injuries = [], variant = 0, gear = [], style = 'regular' }, catalog = LOCAL_EXERCISES) {
-  const slots = SLOTS[sessionType];
+export function planWorkout({ sessionType, location, goal, level, injuries = [], variant = 0, gear = [], style = 'regular', slots: customSlots = null, maxExercises = null }, catalog = LOCAL_EXERCISES) {
+  const slots = customSlots || SLOTS[sessionType];
   if (!slots) throw new RangeError(`unknown session type: ${sessionType}`);
   const scheme = SCHEMES[goal] || SCHEMES.fit;
   const rank = LEVEL_RANK[level] ?? 0;
-  const limit = EXERCISES_BY_LEVEL[level] ?? EXERCISES_BY_LEVEL.beg;
+  const limit = maxExercises ?? EXERCISES_BY_LEVEL[level] ?? EXERCISES_BY_LEVEL.beg;
 
   const pool = catalog.filter((e) =>
     availableAt(e, { location, gear, style })

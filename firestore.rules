@@ -10,14 +10,15 @@ service cloud.firestore {
 
     function validSettings(s) {
       return s is map
-        && s.keys().hasOnly(['split','restSec','homeGear','homeStyle','shortMode','superset','dropset'])
+        && s.keys().hasOnly(['split','restSec','homeGear','homeStyle','shortMode','superset','dropset','warmup'])
         && (!('split' in s) || s.split in ['auto','flex','manual'])
         && (!('restSec' in s) || num(s.restSec, 10, 600))
         && (!('homeGear' in s) || (s.homeGear is list && s.homeGear.size() <= 30))
         && (!('homeStyle' in s) || s.homeStyle in ['calisthenics','military','regular'])
         && (!('shortMode' in s) || s.shortMode is bool)
         && (!('superset' in s) || s.superset is bool)
-        && (!('dropset' in s) || s.dropset is bool);
+        && (!('dropset' in s) || s.dropset is bool)
+        && (!('warmup' in s) || s.warmup is bool);
     }
 
     function validProfile(d) {
@@ -41,9 +42,11 @@ service cloud.firestore {
 
     function validWorkout(d) {
       return d.keys().hasOnly(['date','location','title','sessionType','sessionIndex','plan',
-               'startedAt','endedAt','durationSec','plannedSets','completedSets','volumeKg','status','shortMin'])
+               'startedAt','endedAt','durationSec','plannedSets','completedSets','volumeKg','status','shortMin','longMin','focus'])
         && (!('shortMin' in d) || d.shortMin in [20,30,45])
-        && (!('sessionType' in d) || d.sessionType in ['fullBody','upper','lower','push','pull','legs'])
+        && (!('longMin' in d) || d.longMin in [75,90])
+        && (!('focus' in d) || (d.focus is list && d.focus.size() <= 9))
+        && (!('sessionType' in d) || d.sessionType in ['fullBody','upper','lower','push','pull','legs','custom'])
         && (!('sessionIndex' in d) || num(d.sessionIndex, 0, 5))
         && (!('plan' in d) || (d.plan is list && d.plan.size() <= 12))
         && (!('date' in d) || str(d.date, 10))
