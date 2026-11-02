@@ -46,7 +46,26 @@ export const MEDIA_IDS = Object.freeze({
   'local-dead-bug': 'Dead_Bug',
   'local-plank': 'Plank',
   'local-cable-crunch': 'Cable_Crunch',
-  'local-mountain-climbers': 'Mountain_Climbers'
+  'local-mountain-climbers': 'Mountain_Climbers',
+  'local-incline-fly': 'Incline_Dumbbell_Flyes',
+  'local-decline-db-press': 'Decline_Dumbbell_Bench_Press',
+  'local-cable-crossover': 'Cable_Crossover',
+  'local-close-grip-pulldown': 'Close-Grip_Front_Lat_Pulldown',
+  'local-straight-arm-pulldown': 'Straight-Arm_Pulldown',
+  'local-t-bar-row': 'T-Bar_Row_with_Handle',
+  'local-arnold-press': 'Arnold_Dumbbell_Press',
+  'local-front-raise': 'Front_Dumbbell_Raise',
+  'local-cable-lateral-raise': 'Cable_Seated_Lateral_Raise',
+  'local-bent-rear-raise': 'Bent_Over_Dumbbell_Rear_Delt_Raise_With_Head_On_Bench',
+  'local-incline-curl': 'Incline_Dumbbell_Curl',
+  'local-preacher-curl': 'Preacher_Curl',
+  'local-barbell-curl': 'Barbell_Curl',
+  'local-concentration-curl': 'Concentration_Curls',
+  'local-rope-pushdown': 'Triceps_Pushdown_-_Rope_Attachment',
+  'local-skull-crusher': 'Lying_Triceps_Press',
+  'local-cable-one-arm-extension': 'Cable_One_Arm_Tricep_Extension',
+  'local-close-grip-bench': 'Close-Grip_Barbell_Bench_Press',
+  'local-tricep-dips': 'Dips_-_Triceps_Version'
 });
 
 export function mediaFrames(exerciseId) {

@@ -93,3 +93,19 @@ test('the superset setting pairs a normal workout too', () => {
   const { plan } = compose({}, { settings: { superset: true } });
   assert.ok(plan.exercises.some((e) => e.pair));
 });
+
+test('a 90 minute upper workout fills the time with more exercises, not more sets', () => {
+  const normal = compose();
+  const long = compose({ minutes: 90 });
+  assert.ok(long.plan.exercises.length >= normal.plan.exercises.length + 3, String(long.plan.exercises.length));
+  assert.ok(long.plan.estimateSec >= 70 * 60, String(long.plan.estimateSec));
+  assert.ok(long.plan.exercises.every((e, i) => i >= normal.plan.exercises.length || e.sets === normal.plan.exercises[i].sets));
+  assert.ok(long.plan.exercises.every((e) => e.sets <= 4));
+});
+
+test('a long workout with injuries still gets many exercises, with supersets leaving none unpaired', () => {
+  const { plan } = compose({ minutes: 90 }, { injuries: ['shoulders', 'wrists'], settings: { superset: true } });
+  assert.ok(plan.exercises.length >= 6, String(plan.exercises.length));
+  assert.equal(plan.exercises.length % 2, 0);
+  assert.ok(plan.exercises.filter((e) => e.pair).length * 2 === plan.exercises.length);
+});

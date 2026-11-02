@@ -5,7 +5,7 @@
 
 export const SHORT_OPTIONS = [20, 30, 45];
 export const LONG_OPTIONS = [75, 90]; // minutes, for a long workout
-export const MAX_EXERCISES = 10; // firestore.rules allows 12 plan items
+export const MAX_EXERCISES = 12; // firestore.rules allows 12 plan items
 export const MAX_SETS = 5;
 export const SET_SEC = 45; // one set including getting into position
 export const TRANSITION_SEC = 60; // moving to a new station or pair
@@ -103,8 +103,8 @@ export function shortenPlan(exercises, minutes, restSec, { alwaysPair = false, r
 }
 
 /**
- * Fills a long workout (more than an hour): adds the `extras` (more exercises for the same muscles, best first)
- * while they still fit, then adds sets to the exercises one at a time, up to MAX_SETS. Normal rests.
+ * Fills a long workout (more than an hour) by adding exercises, not sets: the `extras` (more exercises for the same muscles, best first)
+ * are added while they still fit, up to MAX_EXERCISES. Normal rests. With supersets on, an added exercise that would be left unpaired is not kept.
  * @returns {{ exercises: object[], restSec: number, estimateSec: number }}
  */
 export function growPlan(base, extras, minutes, restSec, { alwaysPair = false, reserveSec = 0 } = {}) {
@@ -119,15 +119,8 @@ export function growPlan(base, extras, minutes, restSec, { alwaysPair = false, r
     if (!fits(next)) break;
     items = next;
   }
-
-  for (let grew = true; grew;) {
-    grew = false;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].sets >= MAX_SETS) continue;
-      const next = items.map((e, j) => (j === i ? { ...e, sets: e.sets + 1 } : e));
-      if (fits(next)) { items = next; grew = true; }
-    }
-  }
+  // An odd count leaves one exercise out of the supersets: drop the last one added.
+  if (alwaysPair && items.length % 2 === 1 && items.length > base.length) items = items.slice(0, -1);
 
   const exercises = shaped(items);
   return { exercises, restSec, estimateSec: estimateSeconds(exercises, restSec) };

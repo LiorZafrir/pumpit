@@ -50,10 +50,10 @@ export function composeWorkout({ profile, workouts, location, minutes = null, fo
     exercises = short.exercises;
     rest = short.restSec;
   } else if (LONG_OPTIONS.includes(minutes)) {
-    // The same slots twice gives more exercises for the same muscles; the first ones are the normal workout.
+    // The same slots three times gives more exercises for the same muscles; the first ones are the normal workout.
     const once = slots || SLOTS[next.type];
-    const wider = planWorkout({ ...base, sessionType: next.type, maxExercises: MAX_EXERCISES, slots: [...once, ...once] });
-    exercises = growPlan(exercises, wider.exercises.slice(exercises.length), minutes, settings.restSec, options).exercises;
+    const wider = planWorkout({ ...base, sessionType: next.type, maxExercises: MAX_EXERCISES, slots: [...once, ...once, ...once] });
+    exercises = growPlan(exercises, wider.exercises.filter((w) => !exercises.some((e) => e.exerciseId === w.exerciseId)), minutes, settings.restSec, options).exercises;
   } else if (settings.superset) {
     exercises = pairExercises(exercises);
   }

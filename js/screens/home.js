@@ -65,7 +65,8 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
       return h('li', { class: `exercise-row${inPair ? ' in-pair' : ''}` },
         h('div', { class: 'exercise-main' },
           h('span', { class: 'exercise-name' }, ex.name),
-          h('span', { class: 'muted small' }, [MUSCLE_LABELS[ex.muscle], inPair ? 'סופר סט' : ''].filter(Boolean).join(' · '))),
+          h('span', { class: 'muted small' }, MUSCLE_LABELS[ex.muscle]),
+          inPair ? h('span', { class: 'pair-tag' }, item.pair === true ? 'סופר סט · א׳' : 'סופר סט · ב׳') : null),
         h('span', { class: 'exercise-dose num', dir: 'ltr' }, dose(item)));
     });
   }

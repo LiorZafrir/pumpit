@@ -86,7 +86,28 @@ export const LOCAL_EXERCISES = Object.freeze([
   ex('plank', 'פלאנק', 'core', GH, ['shoulders', 'wrists'], 'beg', { timed: true, mil: true }),
   ex('cable-crunch', 'כפיפת בטן בכבל', 'core', G, ['neck']),
   ex('mountain-climbers', 'מטפסי הרים', 'core', H, ['wrists', 'shoulders'], 'mid', { mil: true }),
-  ex('hanging-knee-raise', 'הרמת ברכיים בתלייה', 'core', G, ['shoulders', 'wrists'], 'mid')
+  ex('hanging-knee-raise', 'הרמת ברכיים בתלייה', 'core', G, ['shoulders', 'wrists'], 'mid'),
+
+  // more variety, used by long workouts
+  ex('incline-fly', 'פרפר בשיפוע עם משקולות', 'chest', G, ['shoulders'], 'mid'),
+  ex('decline-db-press', 'לחיצת חזה בשיפוע תחתון', 'chest', G, ['shoulders', 'wrists'], 'mid'),
+  ex('cable-crossover', 'הצלבת כבלים', 'chest', G, ['shoulders'], 'mid'),
+  ex('close-grip-pulldown', 'משיכת פולי עליון באחיזה צרה', 'back', G, ['shoulders', 'elbows'], 'beg'),
+  ex('straight-arm-pulldown', 'משיכה בידיים ישרות בפולי', 'back', G, ['shoulders'], 'beg'),
+  ex('t-bar-row', 'חתירה בטי-בר', 'back', G, ['lowerBack', 'wrists'], 'mid'),
+  ex('arnold-press', 'לחיצת ארנולד', 'shoulders', GH, ['shoulders', 'wrists'], 'mid', { gear: ['dumbbells'] }),
+  ex('front-raise', 'הרמות לפנים', 'shoulders', GH, ['shoulders'], 'beg', { gear: ['dumbbells'] }),
+  ex('cable-lateral-raise', 'הרמות צד בכבל', 'shoulders', G, ['shoulders'], 'beg'),
+  ex('bent-rear-raise', 'הרמות אחוריות בהטיית גו', 'rear', GH, ['lowerBack'], 'beg', { gear: ['dumbbells'] }),
+  ex('incline-curl', 'כפיפת מרפק בספסל משופע', 'biceps', G, ['elbows'], 'beg'),
+  ex('preacher-curl', 'כפיפת מרפק על ספסל כמרצה', 'biceps', G, ['elbows', 'wrists'], 'beg'),
+  ex('barbell-curl', 'כפיפת מרפק במוט', 'biceps', G, ['elbows', 'wrists'], 'beg'),
+  ex('concentration-curl', 'כפיפת ריכוז', 'biceps', GH, ['elbows', 'wrists'], 'beg', { gear: ['dumbbells'] }),
+  ex('rope-pushdown', 'פשיטת מרפק בחבל', 'triceps', G, ['elbows'], 'beg'),
+  ex('skull-crusher', 'פשיטת מרפק בשכיבה', 'triceps', G, ['elbows', 'wrists'], 'mid'),
+  ex('cable-one-arm-extension', 'פשיטת מרפק ביד אחת בכבל', 'triceps', G, ['elbows'], 'beg'),
+  ex('close-grip-bench', 'לחיצת חזה באחיזה צרה', 'triceps', G, ['shoulders', 'elbows', 'wrists'], 'mid'),
+  ex('tricep-dips', 'מקבילים', 'triceps', G, ['shoulders', 'elbows', 'wrists'], 'mid')
 ]);
 
 export function exerciseById(id) {
