@@ -76,6 +76,16 @@ export async function reauthenticate() {
   return 'done';
 }
 
+/** Whether a deletion is waiting for the redirect to come back (does not clear the flag). */
+export function hasDeletePending() {
+  try {
+    const at = Number(localStorage.getItem(PENDING_KEY));
+    return Number.isFinite(at) && at > 0 && Date.now() - at < PENDING_MAX_MS;
+  } catch {
+    return false;
+  }
+}
+
 /** True once if a deletion was waiting for the redirect to come back. */
 export function consumeDeletePending() {
   try {

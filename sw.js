@@ -1,5 +1,5 @@
 // Service worker: caches the app shell. Bump VERSION on every release so clients refresh.
-const VERSION = 'pumpit-v19';
+const VERSION = 'pumpit-v20';
 const MEDIA_CACHE = 'pumpit-media-v1';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
@@ -85,18 +85,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Firebase's own pages (/__/auth/handler, /__/firebase/init.json) change per request and must never be cached.
+  if (url.origin === self.location.origin && url.pathname.startsWith('/__/')) return;
+
   if (url.origin === self.location.origin) {
-    // Network first so updates show up; fall back to cache when offline.
+    // Cache first: the whole app is precached per VERSION, so opening it needs no network round trips.
+    // A new VERSION installs a fresh cache and the page reloads once when it takes over (app.js).
+    // Files outside the precached list are fetched normally and not stored.
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(SHELL_CACHE).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request, { ignoreSearch: true }).then((hit) => hit || caches.match('./index.html')))
+      caches.open(SHELL_CACHE).then((cache) => cache.match(request, { ignoreSearch: request.mode === 'navigate' }).then((hit) => hit || fetch(request)
+        .catch(() => (request.mode === 'navigate' ? cache.match('./index.html') : Response.error()))))
     );
     return;
   }

@@ -1,6 +1,6 @@
 // Hash router: one screen at a time.
 // Signed out -> login. Signed in without a finished profile -> onboarding. Otherwise the app.
-import { clearDeletePending, consumeDeletePending, finishRedirect, watchAuth } from './auth.js';
+import { clearDeletePending, consumeDeletePending, finishRedirect, hasDeletePending, watchAuth } from './auth.js';
 import { createProfile } from './store.js';
 import { actions, clearSession, finishDeletion, loadAll, onSyncError, planNext, session } from './session.js';
 import { buildProfile, isProfileComplete } from './logic/onboarding.js';
@@ -197,17 +197,30 @@ async function resumeDeletion(u) {
   }
 }
 
-redirectError = await finishRedirect();
-if (redirectError) clearDeletePending();
-watchAuth((u) => {
+// Checking a Google redirect sign-in must not hold up the first screen. Its error, if any, shows on the login screen.
+const redirectChecked = finishRedirect();
+redirectChecked.then((err) => {
+  if (!err) return;
+  clearDeletePending();
+  redirectError = err;
+  if (authReady && !user) route();
+});
+
+watchAuth(async (u) => {
   user = u;
   authReady = true;
   clearSession();
-  if (u && consumeDeletePending()) {
+  if (u && hasDeletePending()) {
+    // Only in this rare case wait for the redirect result: a failed confirmation must never start a deletion.
     profileState = 'idle';
     route();
-    resumeDeletion(u);
-  } else if (u) {
+    if (!(await redirectChecked) && user === u && consumeDeletePending()) {
+      resumeDeletion(u);
+      return;
+    }
+    clearDeletePending();
+  }
+  if (u) {
     loadProfile(u);
   } else {
     profileState = 'idle';

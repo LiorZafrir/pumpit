@@ -4,7 +4,10 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 
 const ROOT = resolve('.');
-const PORT = Number(process.env.PORT || 5173);
+const arg = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
+const PORT = Number(arg('port') || process.env.PORT || 5173);
+// --delay=150 (or DELAY_MS) adds latency to every response, to see what a slow connection does to loading.
+const DELAY_MS = Number(arg('delay') || process.env.DELAY_MS || 0);
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -18,6 +21,7 @@ const TYPES = {
 const BLOCKED = /^\/(node_modules|tests|tools|\.git|\.claude)(\/|$)/;
 
 createServer(async (req, res) => {
+  if (DELAY_MS) await new Promise((r) => setTimeout(r, DELAY_MS));
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   const rel = normalize(path === '/' ? '/index.html' : path);
   const file = join(ROOT, rel);
