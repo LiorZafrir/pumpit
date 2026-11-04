@@ -92,7 +92,10 @@ async function route() {
   const token = ++renderToken;
 
   if (!authReady || (user && profileState !== 'ready' && profileState !== 'error')) {
-    showFullScreen(h('div', { class: 'splash', 'aria-label': 'טוען' }, h('div', { class: 'pulse-dot' })));
+    showFullScreen(h('div', { class: 'launch', role: 'status', 'aria-label': 'טוען' },
+      h('div', { class: 'launch-logo' }, h('div', { class: 'launch-bolt' })),
+      h('div', { class: 'launch-name' }, 'PumpIt'),
+      h('div', { class: 'launch-bar' }, h('span'))));
     return;
   }
 
