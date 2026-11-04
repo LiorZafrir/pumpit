@@ -107,7 +107,33 @@ export const LOCAL_EXERCISES = Object.freeze([
   ex('skull-crusher', 'פשיטת מרפק בשכיבה', 'triceps', G, ['elbows', 'wrists'], 'mid'),
   ex('cable-one-arm-extension', 'פשיטת מרפק ביד אחת בכבל', 'triceps', G, ['elbows'], 'beg'),
   ex('close-grip-bench', 'לחיצת חזה באחיזה צרה', 'triceps', G, ['shoulders', 'elbows', 'wrists'], 'mid'),
-  ex('tricep-dips', 'מקבילים', 'triceps', G, ['shoulders', 'elbows', 'wrists'], 'mid')
+  ex('tricep-dips', 'מקבילים', 'triceps', G, ['shoulders', 'elbows', 'wrists'], 'mid'),
+
+  // more home options: kettlebell, bands, a step or box
+  ex('kb-goblet-squat', 'סקוואט גביע עם קטלבל', 'quads', H, ['knees'], 'beg', { gear: ['kettlebell'] }),
+  ex('kb-row', 'חתירה עם קטלבל ביד אחת', 'back', H, ['lowerBack'], 'beg', { gear: ['kettlebell'] }),
+  ex('kb-floor-press', 'לחיצת חזה על הרצפה עם קטלבל', 'chest', H, ['shoulders', 'wrists'], 'beg', { gear: ['kettlebell'] }),
+  ex('kb-press', 'לחיצת כתפיים עם קטלבל', 'shoulders', H, ['shoulders', 'wrists'], 'mid', { gear: ['kettlebell'] }),
+  ex('kb-overhead-extension', 'פשיטת מרפק מעל הראש עם קטלבל', 'triceps', H, ['elbows', 'shoulders'], 'beg', { gear: ['kettlebell'] }),
+  ex('kb-swing', 'סווינג קטלבל', 'glutes', H, ['lowerBack'], 'mid', { gear: ['kettlebell'] }),
+  ex('kb-single-leg-rdl', 'דדליפט רגל אחת עם קטלבל', 'hamstrings', H, ['lowerBack'], 'mid', { gear: ['kettlebell'] }),
+  ex('band-pull-apart', 'פתיחת גומייה לצדדים', 'rear', H, [], 'beg', { gear: ['bands'] }),
+  ex('band-chest-press', 'לחיצת חזה עם גומייה', 'chest', H, ['shoulders'], 'beg', { gear: ['bands'] }),
+  ex('band-shoulder-press', 'לחיצת כתפיים עם גומייה', 'shoulders', H, ['shoulders'], 'beg', { gear: ['bands'] }),
+  ex('band-lateral-raise', 'הרמות צד עם גומייה', 'shoulders', H, ['shoulders'], 'beg', { gear: ['bands'] }),
+  ex('band-squat', 'סקוואט עם גומייה', 'quads', H, ['knees'], 'beg', { gear: ['bands'] }),
+  ex('band-hip-extension', 'בעיטה לאחור עם גומייה', 'glutes', H, ['hips'], 'beg', { gear: ['bands'] }),
+  ex('band-good-morning', 'בוקר טוב עם גומייה', 'hamstrings', H, ['lowerBack'], 'beg', { gear: ['bands'] }),
+  ex('band-calf-raise', 'הרמות תאומים עם גומייה', 'calves', H, ['ankles'], 'beg', { gear: ['bands'] }),
+  ex('band-overhead-extension', 'פשיטת מרפק מעל הראש עם גומייה', 'triceps', H, ['elbows', 'shoulders'], 'beg', { gear: ['bands'] }),
+  ex('step-up', 'עלייה על מדרגה', 'glutes', H, ['knees', 'hips'], 'beg', { gear: ['step'] }),
+  ex('box-jump', 'קפיצה על קופסה', 'quads', H, ['knees', 'ankles'], 'mid', { gear: ['step'] }),
+  ex('russian-twist', 'סיבוב רוסי', 'core', GH, ['lowerBack'], 'beg'),
+  ex('side-plank', 'פלאנק צד', 'core', GH, ['shoulders', 'wrists'], 'beg', { timed: true }),
+  ex('single-leg-bridge', 'גשר ישבן ברגל אחת', 'glutes', H, ['hips'], 'mid'),
+  ex('db-lunge', 'מכרעים עם משקולות', 'quads', GH, ['knees', 'hips'], 'mid', { gear: ['dumbbells'] }),
+  ex('db-bent-row', 'חתירה בשתי משקולות בהטיית גו', 'back', GH, ['lowerBack'], 'beg', { gear: ['dumbbells'] }),
+  ex('db-calf-raise', 'הרמות תאומים עם משקולת', 'calves', GH, ['ankles'], 'beg', { gear: ['dumbbells'] })
 ]);
 
 export function exerciseById(id) {

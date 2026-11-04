@@ -65,7 +65,30 @@ export const MEDIA_IDS = Object.freeze({
   'local-skull-crusher': 'Lying_Triceps_Press',
   'local-cable-one-arm-extension': 'Cable_One_Arm_Tricep_Extension',
   'local-close-grip-bench': 'Close-Grip_Barbell_Bench_Press',
-  'local-tricep-dips': 'Dips_-_Triceps_Version'
+  'local-tricep-dips': 'Dips_-_Triceps_Version',
+  'local-kb-goblet-squat': 'Goblet_Squat',
+  'local-kb-row': 'One-Arm_Kettlebell_Row',
+  'local-kb-floor-press': 'Extended_Range_One-Arm_Kettlebell_Floor_Press',
+  'local-kb-press': 'Kettlebell_Seated_Press',
+  'local-kb-swing': 'One-Arm_Kettlebell_Swings',
+  'local-kb-single-leg-rdl': 'Kettlebell_One-Legged_Deadlift',
+  'local-band-pull-apart': 'Band_Pull_Apart',
+  'local-band-chest-press': 'Bench_Press_-_With_Bands',
+  'local-band-shoulder-press': 'Shoulder_Press_-_With_Bands',
+  'local-band-lateral-raise': 'Lateral_Raise_-_With_Bands',
+  'local-band-squat': 'Squats_-_With_Bands',
+  'local-band-hip-extension': 'Hip_Extension_with_Bands',
+  'local-band-good-morning': 'Band_Good_Morning',
+  'local-band-calf-raise': 'Calf_Raises_-_With_Bands',
+  'local-band-overhead-extension': 'Speed_Band_Overhead_Triceps',
+  'local-step-up': 'Step-up_with_Knee_Raise',
+  'local-box-jump': 'Front_Box_Jump',
+  'local-russian-twist': 'Russian_Twist',
+  'local-side-plank': 'Side_Bridge',
+  'local-single-leg-bridge': 'Single_Leg_Glute_Bridge',
+  'local-db-lunge': 'Dumbbell_Lunges',
+  'local-db-bent-row': 'Bent_Over_Two-Dumbbell_Row',
+  'local-db-calf-raise': 'Calf_Raise_On_A_Dumbbell'
 });
 
 export function mediaFrames(exerciseId) {

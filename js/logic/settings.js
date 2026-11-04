@@ -2,7 +2,7 @@
 import { GOALS, LEVELS, INJURY_AREAS, SEXES, inRange } from './onboarding.js';
 
 export const REST = { min: 30, max: 300, step: 15 }; // inside firestore.rules (10-600)
-export const GEAR = ['dumbbells', 'pullupBar'];
+export const GEAR = ['dumbbells', 'pullupBar', 'kettlebell', 'bands', 'step'];
 export const STYLES = ['regular', 'calisthenics', 'military'];
 
 export const DEFAULT_SETTINGS = Object.freeze({

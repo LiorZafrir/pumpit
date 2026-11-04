@@ -10,7 +10,7 @@ import { GOALS, INJURY_AREAS, LEVELS, RANGES } from '../logic/onboarding.js';
 import { GEAR, REST, STYLES, detailErrors, detailsPatch, settingsOf } from '../logic/settings.js';
 
 const THEME_LABELS = { lime: 'ירוק ליים', blue: 'כחול', pink: 'ורוד', orange: 'כתום', red: 'אדום', yellow: 'צהוב', purple: 'סגול' };
-const GEAR_LABELS = { dumbbells: 'משקולות יד', pullupBar: 'מוט מתח' };
+const GEAR_LABELS = { dumbbells: 'משקולות יד', pullupBar: 'מוט מתח', kettlebell: 'קטלבל', bands: 'גומיות התנגדות', step: 'מדרגה או קופסה יציבה' };
 const STYLE_LABELS = {
   regular: ['רגיל', 'כל הציוד שסימנת'],
   calisthenics: ['קליסטניקס', 'משקל גוף ומוט מתח, בלי משקולות'],

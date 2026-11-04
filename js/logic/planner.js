@@ -26,6 +26,8 @@ export function exerciseLimit(level) {
 
 const HOLD_SECONDS = { beg: 30, mid: 40, adv: 60 };
 
+const WEIGHTS = ['dumbbells', 'kettlebell'];
+
 /**
  * Whether an exercise can be done where the user is. At home it needs the gear they own, and the
  * calisthenics and military styles leave out anything that needs external weights.
@@ -34,7 +36,7 @@ export function availableAt(exercise, { location, gear = [], style = 'regular' }
   if (!exercise.location.includes(location)) return false;
   if (location === 'gym') return true;
   const needs = exercise.gear || [];
-  if (style !== 'regular' && needs.includes('dumbbells')) return false;
+  if (style !== 'regular' && needs.some((g) => WEIGHTS.includes(g))) return false;
   return needs.every((g) => gear.includes(g));
 }
 

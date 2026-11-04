@@ -173,6 +173,21 @@ describe('home gear and style', () => {
     }
   });
 
+  it('kettlebell, bands and a step each unlock their own exercises and nothing else', () => {
+    for (const g of ['kettlebell', 'bands', 'step']) {
+      const ids = allHomeIds({ gear: [g] });
+      assert.ok(ids.some((id) => (exerciseById(id).gear || []).includes(g)), g);
+      assert.ok(ids.every((id) => (exerciseById(id).gear || []).every((x) => x === g)), g);
+    }
+  });
+
+  it('calisthenics and military leave out the kettlebell too, but keep bands and the step', () => {
+    for (const style of ['calisthenics', 'military']) {
+      const ids = allHomeIds({ gear: ['kettlebell', 'bands', 'step'], style });
+      assert.ok(ids.every((id) => !(exerciseById(id).gear || []).includes('kettlebell')), style);
+    }
+  });
+
   it('military style prefers its favourite exercises', () => {
     const ids = idsOf({ style: 'military', gear: ['pullupBar'] });
     assert.ok(ids.every((id) => !['local-incline-push-up', 'local-inverted-row'].includes(id) || exerciseById(id).mil));
