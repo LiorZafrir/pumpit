@@ -45,15 +45,24 @@ export function composeWorkout({ profile, workouts, location, minutes = null, fo
 
   let exercises = plan.exercises;
   let rest = settings.restSec;
-  if (SHORT_OPTIONS.includes(minutes)) {
-    const short = shortenPlan(exercises, minutes, settings.restSec, options);
-    exercises = short.exercises;
-    rest = short.restSec;
-  } else if (LONG_OPTIONS.includes(minutes)) {
-    // The same slots three times gives more exercises for the same muscles; the first ones are the normal workout.
+  // The same slots three times gives more exercises for the same muscles; the first ones are the normal workout.
+  const grow = () => {
     const once = slots || SLOTS[next.type];
     const wider = planWorkout({ ...base, sessionType: next.type, maxExercises: MAX_EXERCISES, slots: [...once, ...once, ...once] });
-    exercises = growPlan(exercises, wider.exercises.filter((w) => !exercises.some((e) => e.exerciseId === w.exerciseId)), minutes, settings.restSec, options).exercises;
+    const extras = wider.exercises.filter((w) => !plan.exercises.some((e) => e.exerciseId === w.exerciseId));
+    return growPlan(plan.exercises, extras, minutes, settings.restSec, options).exercises;
+  };
+  if (SHORT_OPTIONS.includes(minutes)) {
+    const short = shortenPlan(exercises, minutes, settings.restSec, options);
+    // The normal plan can be much shorter than the time the user has: then fill it up instead of leaving it at 30 of 45 minutes.
+    if (short.estimateSec + warmSec + 7 * 60 < minutes * 60) {
+      exercises = grow();
+    } else {
+      exercises = short.exercises;
+      rest = short.restSec;
+    }
+  } else if (LONG_OPTIONS.includes(minutes)) {
+    exercises = grow();
   } else if (settings.superset) {
     exercises = pairExercises(exercises);
   }

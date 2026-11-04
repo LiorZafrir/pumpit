@@ -109,3 +109,14 @@ test('a long workout with injuries still gets many exercises, with supersets lea
   assert.equal(plan.exercises.length % 2, 0);
   assert.ok(plan.exercises.filter((e) => e.pair).length * 2 === plan.exercises.length);
 });
+
+test('the estimate is close to the chosen time for 45 minutes and up', () => {
+  for (const minutes of [45, 75, 90]) {
+    for (const settings of [{}, { superset: true }]) {
+      const { plan } = compose({ minutes }, { daysPerWeek: 3, settings });
+      const min = plan.estimateSec / 60;
+      assert.ok(plan.estimateSec <= minutes * 60, String(min));
+      assert.ok(min >= Math.min(minutes - 10, 60), `${minutes}: ${min}`);
+    }
+  }
+});

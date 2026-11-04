@@ -82,7 +82,7 @@ export const LOCAL_EXERCISES = Object.freeze([
   ex('bodyweight-calf-raise', 'הרמות תאומים משקל גוף', 'calves', H, ['ankles']),
 
   // core
-  ex('dead-bug', 'חרק מת', 'core', GH, []),
+  ex('dead-bug', 'דד באג (תרגיל ליבה)', 'core', GH, []),
   ex('plank', 'פלאנק', 'core', GH, ['shoulders', 'wrists'], 'beg', { timed: true, mil: true }),
   ex('cable-crunch', 'כפיפת בטן בכבל', 'core', G, ['neck']),
   ex('mountain-climbers', 'מטפסי הרים', 'core', H, ['wrists', 'shoulders'], 'mid', { mil: true }),
