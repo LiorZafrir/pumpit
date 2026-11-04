@@ -21,7 +21,7 @@ const fmt = (n) => String(round1(n));
 // LRM after the Hebrew unit keeps "65 ק״ג × 9" in reading order inside a left-to-right run.
 const kg = (n) => `${fmt(n)} ק״ג‎`;
 
-function stepper({ label, value, step, min, max, unit }) {
+function stepper({ label, value, step, min, max, unit, onChange }) {
   let current = value;
   const input = h('input', {
     type: 'number', inputmode: step % 1 ? 'decimal' : 'numeric', step: String(step), min, max,
@@ -30,6 +30,7 @@ function stepper({ label, value, step, min, max, unit }) {
   const set = (v) => {
     current = Math.min(max, Math.max(min, round1(v)));
     input.value = fmt(current);
+    if (onChange) onChange(current);
   };
   const btn = (name, glyph, delta) => {
     const b = h('button', { class: 'step-btn', type: 'button', 'aria-label': `${name} ${label}` }, icon(glyph, { size: 26 }));
@@ -118,14 +119,13 @@ export function render({ workout, states, actions, navigate, profile }) {
 
   const lastSetOf = (exerciseId) => workout.sets.filter((s) => s.exerciseId === exerciseId).at(-1) || null;
 
+  // A weight picked on the exercise screen before the set, until that set is logged.
+  const plannedKg = {};
+
   function currentWeightKg(exerciseId, state) {
+    if (typeof plannedKg[exerciseId] === 'number') return plannedKg[exerciseId];
     const prev = lastSetOf(exerciseId);
     return prev ? prev.weightKg || 0 : state && typeof state.workingWeightKg === 'number' ? state.workingWeightKg : null;
-  }
-
-  function shownWeight(exerciseId, state) {
-    const kgValue = currentWeightKg(exerciseId, state);
-    return kgValue == null ? '—' : `${fmt(kgValue)} ק״ג`;
   }
 
   // A reminder before the first set of a weighted exercise (not logged anywhere).
@@ -145,7 +145,7 @@ export function render({ workout, states, actions, navigate, profile }) {
     const lastReps = state && Array.isArray(state.lastReps) ? state.lastReps : [];
     // Within a workout, the next set starts from the set just done. Otherwise from the last workout.
     const prevSet = lastSetOf(item.exerciseId);
-    const startWeight = prevSet ? (prevSet.weightKg || 0) : state && typeof state.workingWeightKg === 'number' ? state.workingWeightKg : 0;
+    const startWeight = typeof plannedKg[item.exerciseId] === 'number' ? plannedKg[item.exerciseId] : prevSet ? (prevSet.weightKg || 0) : state && typeof state.workingWeightKg === 'number' ? state.workingWeightKg : 0;
     const startReps = prevSet
       ? (timed ? prevSet.durationSec ?? item.durationSec : prevSet.reps)
       : timed
@@ -187,6 +187,7 @@ export function render({ workout, states, actions, navigate, profile }) {
     const confirm = h('button', { class: 'btn btn-primary', type: 'button' }, 'אישור');
     confirm.addEventListener('click', () => {
       confirm.disabled = true;
+      delete plannedKg[item.exerciseId];
       actions.recordSet({
         exerciseIndex: pos.exerciseIndex,
         reps: timed ? 0 : reps.get(),
@@ -242,6 +243,13 @@ export function render({ workout, states, actions, navigate, profile }) {
         h('span', { class: 'num', dir: 'ltr' }, timed ? `${lastReps.join(' · ')} שנ׳` : `${kg(state.workingWeightKg || 0)} × ${lastReps.join(' · ')}`))
       : h('p', { class: 'muted small' }, 'בפעם הראשונה: בחר משקל שמרגיש נכון');
 
+    // Set the weight before the set: the log sheet then starts from it, and it is what gets saved for next time.
+    const startKg = currentWeightKg(item.exerciseId, state);
+    const weightPicker = timed ? null : h('div', { class: 'weight-picker' }, stepper({
+      label: 'משקל לסט הזה', value: startKg ?? 0, step: WEIGHT_STEP, min: 0, max: 600, unit: 'ק״ג',
+      onChange: (v) => { plannedKg[item.exerciseId] = v; }
+    }).el);
+
     const done = h('button', { class: 'btn btn-primary', type: 'button' }, 'סיימתי סט');
     done.addEventListener('click', () => { unlockAudio(); openLogSheet(pos); });
 
@@ -258,9 +266,8 @@ export function render({ workout, states, actions, navigate, profile }) {
       exerciseMedia(item.exerciseId),
       h('div', { class: 'tiles' },
         h('div', { class: 'tile' }, h('span', { class: 'muted small' }, 'יעד'),
-          h('span', { class: 'tile-value num', dir: 'ltr' }, timed ? `${item.durationSec} שנ׳` : `${item.repsMin}-${item.repsMax}`)),
-        timed ? null : h('div', { class: 'tile' }, h('span', { class: 'muted small' }, 'משקל'),
-          h('span', { class: 'tile-value num', dir: 'ltr' }, shownWeight(item.exerciseId, state)))),
+          h('span', { class: 'tile-value num', dir: 'ltr' }, timed ? `${item.durationSec} שנ׳` : `${item.repsMin}-${item.repsMax}`))),
+      weightPicker,
       lastLine,
       warmupSetHint(item, pos, state),
       guideBlock(item.exerciseId),
