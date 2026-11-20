@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { alternativesFor, swapPlanItem } from '../../js/logic/swap.js';
+import { addPlanItem, addableExercises, alternativesFor, rePair, removePlanItem, swapPlanItem } from '../../js/logic/swap.js';
+import { composeWorkout, estimateEdited } from '../../js/logic/compose.js';
+import { MAX_EXERCISES } from '../../js/logic/shortmode.js';
 import { planWorkout } from '../../js/logic/planner.js';
 import { toStoredPlanItem } from '../../js/logic/workout-state.js';
 import { exerciseById } from '../../js/data/local-exercises.js';
@@ -59,4 +61,48 @@ test('a swapped slot keeps its superset flag and does not get more sets than it 
   assert.equal(next[0].pair, true);
   assert.equal(next[0].sets, 2);
   assert.equal('pair' in swapPlanItem(plan(), 1, alternativesFor(plan(), 1, ctx)[0], { goal: 'mass', level: 'mid' })[1], false);
+});
+
+const editCtx = { location: 'gym', level: 'mid', goal: 'mass', injuries: [], gear: [], style: 'regular' };
+const editProfile = { goal: 'mass', level: 'mid', daysPerWeek: 4, injuries: [], settings: {} };
+const suggested = () => composeWorkout({ profile: editProfile, workouts: [], location: 'gym' }).plan.exercises;
+
+test('removing an exercise keeps the others in order', () => {
+  const p = suggested();
+  const out = removePlanItem(p, 1);
+  assert.deepEqual(out.map((e) => e.exerciseId), p.filter((_, i) => i !== 1).map((e) => e.exerciseId));
+});
+
+test('addable exercises are not in the plan already and are safe for the injuries', () => {
+  const p = suggested();
+  const options = addableExercises(p, { ...editCtx, injuries: ['shoulders'] });
+  assert.ok(options.length > 0);
+  for (const e of options) {
+    assert.ok(!p.some((x) => x.exerciseId === e.id));
+    assert.ok(!e.loads.includes('shoulders'));
+  }
+});
+
+test('adding puts the exercise last, never twice and never beyond the limit', () => {
+  const p = suggested();
+  const ex = addableExercises(p, editCtx)[0];
+  const out = addPlanItem(p, ex, editCtx);
+  assert.equal(out.length, p.length + 1);
+  assert.equal(out.at(-1).exerciseId, ex.id);
+  assert.ok(out.at(-1).sets <= Math.max(...p.map((e) => e.sets)));
+  assert.equal(addPlanItem(out, ex, editCtx).length, out.length);
+  let full = out;
+  for (const e of addableExercises(out, editCtx)) full = addPlanItem(full, e, editCtx);
+  assert.ok(full.length <= MAX_EXERCISES);
+});
+
+test('pairing again after an edit leaves no leader without a partner', () => {
+  const p = rePair(removePlanItem(rePair(suggested(), true), 0), true);
+  for (let i = 0; i < p.length; i++) if (p[i].pair) assert.ok(p[i + 1]);
+  assert.ok(rePair(p, false).every((e) => !e.pair));
+});
+
+test('an edited list with fewer exercises is estimated shorter', () => {
+  const p = suggested();
+  assert.ok(estimateEdited({ profile: editProfile, exercises: removePlanItem(p, 0) }) < estimateEdited({ profile: editProfile, exercises: p }));
 });

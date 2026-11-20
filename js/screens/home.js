@@ -4,7 +4,10 @@ import { MUSCLE_LABELS, SESSION_TITLES } from '../ui/labels.js';
 import { exerciseById } from '../data/local-exercises.js';
 import { doneDates, doneThisWeek, weeklyStreak } from '../logic/streak.js';
 import { weekDays } from '../logic/week.js';
-import { LONG_OPTIONS, SHORT_OPTIONS } from '../logic/shortmode.js';
+import { LONG_OPTIONS, MAX_EXERCISES, SHORT_OPTIONS } from '../logic/shortmode.js';
+import { addableExercises, addPlanItem, alternativesFor, rePair, removePlanItem, swapPlanItem } from '../logic/swap.js';
+import { estimateEdited } from '../logic/compose.js';
+import { settingsOf } from '../logic/settings.js';
 import { FOCUS_LABELS, FOCUS_OPTIONS, focusTitle, normalizeFocus } from '../logic/focus.js';
 import { openSheet } from '../ui/sheet.js';
 import { unlockAudio } from '../services/feedback.js';
@@ -35,6 +38,8 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
   let location = profile.lastLocation === 'home' ? 'home' : 'gym';
   let minutes = null; // chosen per workout, not remembered
   let focus = []; // areas picked instead of the planned session, also per workout
+  let custom = null; // the exercise list after the user's own edits; any change of place, time or focus starts over
+  let suggested = []; // what the app suggested last, to know whether supersets were part of it
 
   const days = Math.min(6, Math.max(2, Number(profile.daysPerWeek) || 3));
   const now = new Date();
@@ -58,18 +63,91 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
   const errorSlot = h('div', { role: 'alert' });
   const startBtn = h('button', { class: 'btn btn-primary', type: 'button' });
 
-  function rowsFor(exercises) {
+  const planContext = () => {
+    const st = settingsOf(profile);
+    return { location, level: profile.level, goal: profile.goal, injuries: Array.isArray(profile.injuries) ? profile.injuries : [], gear: st.homeGear, style: st.homeStyle };
+  };
+
+  function rowsFor(exercises, editable = false) {
     return exercises.map((item, i) => {
       const ex = exerciseById(item.exerciseId) || { name: item.name || 'תרגיל', muscle: item.muscle };
       const inPair = item.pair === true || exercises[i - 1]?.pair === true;
-      return h('li', { class: `exercise-row${inPair ? ' in-pair' : ''}` },
+      const content = [
         h('div', { class: 'exercise-main' },
           h('span', { class: 'exercise-name' }, ex.name),
           h('span', { class: 'muted small' }, MUSCLE_LABELS[ex.muscle]),
           inPair ? h('span', { class: 'pair-tag' }, item.pair === true ? 'סופר סט · א׳' : 'סופר סט · ב׳') : null),
-        h('span', { class: 'exercise-dose num', dir: 'ltr' }, dose(item)));
+        h('span', { class: 'exercise-dose num', dir: 'ltr' }, dose(item))];
+      if (!editable) return h('li', { class: `exercise-row${inPair ? ' in-pair' : ''}` }, ...content);
+      const edit = h('button', { class: 'exercise-edit', type: 'button', 'aria-label': `עריכת ${ex.name}` }, ...content, icon('more', { size: 20 }));
+      edit.addEventListener('click', () => openRowSheet(i));
+      return h('li', { class: `exercise-row${inPair ? ' in-pair' : ''}` }, edit);
     });
   }
+
+  // ---- editing the list before the workout starts ----
+
+  const shownList = () => custom || suggested;
+  const wantsPairs = () => settingsOf(profile).superset || suggested.some((e) => e.pair);
+  function edit(list) {
+    custom = rePair(list, wantsPairs());
+    errorSlot.replaceChildren();
+    drawPlan();
+  }
+
+  function openRowSheet(index) {
+    const list = shownList();
+    const item = list[index];
+    const ex = exerciseById(item.exerciseId);
+    const sheet = openSheet({ title: ex ? ex.name : 'תרגיל' });
+    const alts = alternativesFor(list, index, planContext());
+    const swap = h('button', { class: 'btn btn-primary', type: 'button', disabled: alts.length === 0 }, icon('swap', { size: 20 }), h('span', null, 'החלף בתרגיל אחר'));
+    swap.addEventListener('click', () => { sheet.close(); openSwapSheet(index, alts); });
+    const remove = h('button', { class: 'btn btn-ghost btn-danger-text', type: 'button' }, 'הסר מהאימון');
+    remove.addEventListener('click', () => { sheet.close(); edit(removePlanItem(list, index)); });
+    sheet.body.append(
+      alts.length ? null : h('p', { class: 'sheet-text' }, 'אין תרגיל חלופי לאותו שריר שמתאים למיקום, לרמה ולאזורים הרגישים שלך.'),
+      h('div', { class: 'sheet-actions' }, swap, remove));
+  }
+
+  function chooserRow(ex, label, onPick) {
+    const where = ex.location.length === 2 ? 'חדר כושר או בית' : ex.location[0] === 'gym' ? 'חדר כושר' : 'בית';
+    const row = h('button', { class: 'swap-row', type: 'button' },
+      h('span', { class: 'swap-text' }, h('span', { class: 'swap-name' }, ex.name), h('span', { class: 'small muted' }, `${MUSCLE_LABELS[ex.muscle]} · ${where}`)),
+      h('span', { class: 'swap-pill' }, label));
+    row.addEventListener('click', onPick);
+    return row;
+  }
+
+  function openSwapSheet(index, alts) {
+    const sheet = openSheet({ title: 'החלפת תרגיל' });
+    const list = shownList();
+    const { goal, level } = planContext();
+    sheet.body.append(
+      h('p', { class: 'sheet-text' }, 'בחר תרגיל חלופי לאותו שריר.'),
+      h('div', { class: 'swap-list' }, ...alts.map((alt) => chooserRow(alt, 'החלף', () => {
+        sheet.close();
+        edit(swapPlanItem(list, index, alt, { goal, level }));
+      }))));
+  }
+
+  function openAddSheet() {
+    const list = shownList();
+    const options = addableExercises(list, planContext());
+    const { goal, level } = planContext();
+    const sheet = openSheet({ title: 'הוספת תרגיל' });
+    sheet.body.append(options.length
+      ? h('div', { class: 'swap-list' }, ...options.map((ex) => chooserRow(ex, 'הוסף', () => {
+        sheet.close();
+        edit(addPlanItem(list, ex, { goal, level }));
+      })))
+      : h('p', { class: 'sheet-text' }, 'אין עוד תרגילים שמתאימים למיקום, לרמה ולאזורים הרגישים שלך.'));
+  }
+
+  const addBtn = h('button', { class: 'btn btn-ghost', type: 'button' }, icon('plus', { size: 20 }), h('span', null, 'הוסף תרגיל'));
+  addBtn.addEventListener('click', openAddSheet);
+  const resetBtn = h('button', { class: 'btn btn-ghost', type: 'button', hidden: true }, 'חזרה לאימון המוצע');
+  resetBtn.addEventListener('click', () => { custom = null; errorSlot.replaceChildren(); drawPlan(); });
 
   function meta(count, sets, extra = '') {
     return count ? `${count === 1 ? 'תרגיל אחד' : `${count} תרגילים`} · ${sets} סטים${extra}` : 'לא נמצאו תרגילים מתאימים';
@@ -80,26 +158,34 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
       titleEl.textContent = active.title || 'אימון פתוח';
       metaEl.textContent = `אימון בתהליך${active.shortMin ? ` · קצר, ${active.shortMin} דק׳` : active.longMin ? ` · ארוך, ${active.longMin} דק׳` : ''} · ${meta(active.plan.length, active.plannedSets)}`;
       listEl.replaceChildren(...rowsFor(active.plan));
+      addBtn.hidden = true;
+      resetBtn.hidden = true;
       startBtn.textContent = 'המשך אימון';
       startBtn.disabled = false;
       return;
     }
     const { next, plan } = planNext(location, { minutes, focus });
+    suggested = plan.exercises;
+    const shown = shownList();
+    const sets = shown.reduce((sum, e) => sum + e.sets, 0);
+    const estimate = custom ? estimateEdited({ profile, exercises: shown, minutes }) : plan.estimateSec;
     titleEl.textContent = next.title || SESSION_TITLES[next.type];
     focusLabel.textContent = focus.length ? focusTitle(focus) : 'לפי התוכנית';
-    metaEl.textContent = meta(plan.exercises.length, plan.plannedSets, ` · ${approxMinutes(plan.estimateSec)}`);
-    listEl.replaceChildren(...(plan.exercises.length
-      ? rowsFor(plan.exercises)
-      : [h('li', { class: 'muted small' }, 'האזורים הרגישים שסימנת מוציאים את כל התרגילים. אפשר לעדכן אותם בפרופיל.')]));
+    metaEl.textContent = meta(shown.length, sets, ` · ${approxMinutes(estimate)}`);
+    listEl.replaceChildren(...(shown.length
+      ? rowsFor(shown, true)
+      : [h('li', { class: 'muted small' }, custom ? 'לא נשארו תרגילים באימון. אפשר להוסיף תרגיל או לחזור לאימון המוצע.' : 'האזורים הרגישים שסימנת מוציאים את כל התרגילים. אפשר לעדכן אותם בפרופיל.')]));
+    addBtn.hidden = shown.length >= MAX_EXERCISES;
+    resetBtn.hidden = !custom;
     startBtn.textContent = 'התחל אימון';
-    startBtn.disabled = plan.exercises.length === 0;
+    startBtn.disabled = shown.length === 0;
   }
 
   startBtn.addEventListener('click', () => {
     unlockAudio();
     errorSlot.replaceChildren();
     try {
-      if (!active) actions.start(location, { minutes, focus });
+      if (!active) actions.start(location, { minutes, focus, exercises: custom });
       navigate('workout');
     } catch {
       errorSlot.replaceChildren(h('div', { class: 'error-msg' }, icon('alert', { size: 20 }), h('span', null, 'לא הצלחנו להתחיל את האימון. נסה שוב.')));
@@ -111,6 +197,7 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
     btn.addEventListener('click', async () => {
       if (location === value) return;
       location = value;
+      custom = null;
       for (const b of segButtons) b.setAttribute('aria-checked', String(b === btn));
       errorSlot.replaceChildren();
       drawPlan();
@@ -128,6 +215,7 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
     btn.addEventListener('click', () => {
       if (minutes === value) return;
       minutes = value;
+      custom = null;
       for (const b of durationButtons) b.setAttribute('aria-checked', String(b === btn));
       drawPlan();
     });
@@ -147,8 +235,8 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
     });
     const apply = h('button', { class: 'btn btn-primary', type: 'button' }, 'אישור');
     const reset = h('button', { class: 'btn btn-ghost', type: 'button' }, 'חזרה לאימון לפי התוכנית');
-    apply.addEventListener('click', () => { focus = normalizeFocus([...picked]); sheet.close(); drawPlan(); });
-    reset.addEventListener('click', () => { focus = []; sheet.close(); drawPlan(); });
+    apply.addEventListener('click', () => { focus = normalizeFocus([...picked]); custom = null; sheet.close(); drawPlan(); });
+    reset.addEventListener('click', () => { focus = []; custom = null; sheet.close(); drawPlan(); });
     sheet.body.append(
       h('p', { class: 'sheet-text' }, 'אפשר לבחור כמה אזורים ביחד. האימון הזה לא ישנה את סדר האימונים של התוכנית.'),
       h('div', { class: 'chips', role: 'group', 'aria-label': 'אזורי אימון' }, ...chips),
@@ -179,6 +267,8 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
         h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'משך האימון' }, ...durationButtons)),
       h('div', null, titleEl, metaEl),
       listEl,
+      addBtn,
+      resetBtn,
       startBtn),
     h('div', { class: 'card stat' },
       h('div', { class: 'row' },

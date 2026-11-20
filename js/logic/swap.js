@@ -3,6 +3,7 @@
 import { LOCAL_EXERCISES } from '../data/local-exercises.js';
 import { availableAt, prescribeExercise } from './planner.js';
 import { toStoredPlanItem } from './workout-state.js';
+import { MAX_EXERCISES, pairExercises } from './shortmode.js';
 
 const LEVEL_RANK = { beg: 0, mid: 1, adv: 2 };
 
@@ -34,4 +35,38 @@ export function swapPlanItem(plan, index, exercise, { goal, level }) {
     const next = toStoredPlanItem(prescribeExercise(exercise, goal, level));
     return toStoredPlanItem({ ...next, sets: Math.min(next.sets, item.sets), pair: item.pair });
   });
+}
+
+/** Every exercise the user could add to this plan: available where they are, safe, not above their level, not already in it. */
+export function addableExercises(plan, { location, level, injuries = [], gear = [], style = 'regular' }, catalog = LOCAL_EXERCISES) {
+  const rank = LEVEL_RANK[level] ?? 0;
+  const inPlan = new Set(plan.map((p) => p.exerciseId));
+  return catalog.filter((e) =>
+    !inPlan.has(e.id)
+    && availableAt(e, { location, gear, style })
+    && LEVEL_RANK[e.level] <= rank
+    && !e.loads.some((area) => injuries.includes(area)));
+}
+
+/** The plan without item `index`. */
+export function removePlanItem(plan, index) {
+  return plan.filter((_, i) => i !== index);
+}
+
+/** The plan with `exercise` added at the end, prescribed for the goal and level and never with more sets than the plan already uses. */
+export function addPlanItem(plan, exercise, { goal, level }, catalog = LOCAL_EXERCISES) {
+  if (plan.length >= MAX_EXERCISES || plan.some((p) => p.exerciseId === exercise.id)) return plan;
+  const next = toStoredPlanItem(prescribeExercise(exercise, goal, level));
+  const cap = plan.length ? Math.max(...plan.map((p) => p.sets)) : next.sets;
+  return [...plan, toStoredPlanItem({ ...next, sets: Math.min(next.sets, cap) })];
+}
+
+/**
+ * Pairs the plan into supersets again after an edit (or clears the pairs). Plan items hold only ids, so the muscle
+ * comes from the catalog.
+ */
+export function rePair(plan, wantPairs, catalog = LOCAL_EXERCISES) {
+  const plain = plan.map((p) => ({ ...p, pair: undefined, muscle: p.muscle ?? catalog.find((e) => e.id === p.exerciseId)?.muscle }));
+  const paired = wantPairs ? pairExercises(plain) : plain;
+  return paired.map((p) => (p.pair === true ? p : { ...p, pair: undefined }));
 }

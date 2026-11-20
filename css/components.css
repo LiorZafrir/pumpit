@@ -425,3 +425,9 @@
 .launch-bar span { display: block; width: 40%; height: 100%; border-radius: 999px; background: var(--accent); animation: launch-slide 1.3s ease-in-out infinite; }
 @keyframes launch-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 @keyframes launch-slide { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+
+/* editing the list before the workout */
+.exercise-row:has(> .exercise-edit) { padding-block: 0; }
+.exercise-edit { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 0; background: none; border: 0; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.exercise-edit > svg { flex: none; color: var(--text-3); }
+.btn[hidden] { display: none; }

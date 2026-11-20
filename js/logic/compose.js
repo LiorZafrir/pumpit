@@ -4,7 +4,8 @@ import { focusTitle, normalizeFocus, slotsForFocus } from './focus.js';
 import { recommendedSplit } from './split.js';
 import { lastFinished } from './streak.js';
 import { settingsOf } from './settings.js';
-import { LONG_OPTIONS, MAX_EXERCISES, SHORT_OPTIONS, estimateSeconds, growPlan, pairExercises, shortenPlan } from './shortmode.js';
+import { LONG_OPTIONS, MAX_EXERCISES, SHORT_OPTIONS, estimateSeconds, growPlan, pairExercises, shortRestSec, shortenPlan } from './shortmode.js';
+import { exerciseById } from '../data/local-exercises.js';
 import { buildWarmup, warmupSeconds } from './warmup.js';
 
 export function splitFor(profile) {
@@ -77,4 +78,14 @@ export function composeWorkout({ profile, workouts, location, minutes = null, fo
       estimateSec: estimateSeconds(exercises, rest) + warmSec
     }
   };
+}
+
+/** Rough length in seconds of a hand-edited list of exercises, the way composeWorkout estimates a plan (warm-up included). */
+export function estimateEdited({ profile, exercises, minutes = null }) {
+  const settings = settingsOf(profile);
+  const rest = SHORT_OPTIONS.includes(minutes) && minutes < 45 ? shortRestSec(settings.restSec) : settings.restSec;
+  const muscles = exercises.map((e) => e.muscle ?? exerciseById(e.exerciseId)?.muscle).filter(Boolean);
+  const warm = settings.warmup ? warmupSeconds(buildWarmup(muscles)) : 0;
+  const items = exercises.map((e) => ({ ...e, muscle: e.muscle ?? exerciseById(e.exerciseId)?.muscle }));
+  return estimateSeconds(items, rest) + warm;
 }

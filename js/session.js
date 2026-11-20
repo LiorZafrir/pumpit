@@ -89,9 +89,11 @@ export const actions = {
     }
   },
 
-  start(location, { minutes = null, focus = [] } = {}) {
+  /** `exercises`: the list the user edited on the home screen, used instead of the suggested one. */
+  start(location, { minutes = null, focus = [], exercises = null } = {}) {
     if (session.active) return session.active;
-    const { next, plan } = planNext(location, { minutes, focus });
+    const { next, plan: suggested } = planNext(location, { minutes, focus });
+    const plan = Array.isArray(exercises) && exercises.length ? { ...suggested, exercises } : suggested;
     if (!plan.exercises.length) throw new Error('no exercises for this workout');
     const id = newId();
     const doc = buildWorkoutDoc({
