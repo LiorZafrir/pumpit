@@ -42,9 +42,10 @@ service cloud.firestore {
 
     function validWorkout(d) {
       return d.keys().hasOnly(['date','location','title','sessionType','sessionIndex','plan',
-               'startedAt','endedAt','durationSec','plannedSets','completedSets','volumeKg','status','shortMin','longMin','focus'])
+               'startedAt','endedAt','durationSec','plannedSets','completedSets','volumeKg','status','shortMin','longMin','focus','note'])
         && (!('shortMin' in d) || d.shortMin in [20,30,45])
         && (!('longMin' in d) || d.longMin in [75,90])
+        && (!('note' in d) || str(d.note, 500))
         && (!('focus' in d) || (d.focus is list && d.focus.size() <= 9))
         && (!('sessionType' in d) || d.sessionType in ['fullBody','upper','lower','push','pull','legs','custom'])
         && (!('sessionIndex' in d) || num(d.sessionIndex, 0, 5))

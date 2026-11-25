@@ -368,3 +368,19 @@ describe('custom focus, long workouts and the warm-up setting', () => {
     await assertFails(updateDoc(doc(alice(), `users/${ALICE}`), { 'settings.warmup': 'no' }));
   });
 });
+
+describe('workout note', () => {
+  it('the owner can add a note of up to 500 characters, not longer, not a non-string', async () => {
+    const path = `users/${ALICE}/workouts/n1`;
+    await seed(path, { date: '2026-01-01', location: 'gym', title: 'x', status: 'done', startedAt: 1 });
+    await assertSucceeds(updateDoc(doc(alice(), path), { note: 'היה קשה בסט האחרון' }));
+    await assertFails(updateDoc(doc(alice(), path), { note: 'א'.repeat(501) }));
+    await assertFails(updateDoc(doc(alice(), path), { note: 5 }));
+  });
+
+  it('another user cannot write a note on it', async () => {
+    const path = `users/${ALICE}/workouts/n2`;
+    await seed(path, { date: '2026-01-01', location: 'gym', title: 'x', status: 'done', startedAt: 1 });
+    await assertFails(updateDoc(doc(bob(), path), { note: 'hi' }));
+  });
+});

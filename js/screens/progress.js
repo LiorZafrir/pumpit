@@ -2,10 +2,10 @@
 import { h } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { lineChart } from '../ui/chart.js';
-import { formatShortDate } from '../ui/labels.js';
+import { formatDuration, formatShortDate } from '../ui/labels.js';
 import { exerciseById } from '../data/local-exercises.js';
 import {
-  BODY_WEIGHT_RANGE, bodyWeightPoints, change, exerciseSeries, exercisesWithData, periodStart, recentRecords, trendLine
+  BODY_WEIGHT_RANGE, bodyWeightPoints, change, exerciseSeries, exercisesWithData, groupWorkoutSets, periodStart, recentRecords, trendLine
 } from '../logic/progress.js';
 
 const PERIOD_LABELS = [['month', 'חודש'], ['quarter', '3 חודשים'], ['year', 'שנה']];
@@ -41,6 +41,8 @@ export function render({ actions, profile }) {
   const exerciseSlot = h('div', { class: 'card progress-card' });
   const bodySlot = h('div', { class: 'card progress-card' });
   const recordsSlot = h('div', { class: 'card progress-card' });
+  const historySlot = h('div', { class: 'card progress-card' });
+  let historyShown = 10;
 
   const segButtons = PERIOD_LABELS.map(([value, label]) => {
     const btn = h('button', { class: 'seg', type: 'button', role: 'radio', 'aria-checked': String(period === value) }, label);
@@ -108,7 +110,7 @@ export function render({ actions, profile }) {
 
     const trend = trendLine(points);
     const delta = change(points);
-    bodySlot.replaceChildren(
+    bodySlot.replaceChildren(...[
       h('div', { class: 'row' },
         h('h2', { class: 'progress-title' }, 'משקל גוף'),
         latest ? h('span', { class: 'num progress-now', dir: 'ltr' }, withUnit(latest.kg, 'ק״ג')) : null),
@@ -118,7 +120,7 @@ export function render({ actions, profile }) {
       points.length
         ? lineChart({ points, trend, formatY: fmt, formatX: formatShortDate, label: `משקל גוף: ${points.length} מדידות, אחרונה ${withUnit(points[points.length - 1].value, 'ק״ג')}` })
         : h('p', { class: 'muted small' }, 'שמור משקל כדי להתחיל לעקוב. מספיק פעם בשבוע, באותו שעה ביום.'),
-      points.length ? h('p', { class: 'muted small' }, `${deltaText(delta, 'ק״ג')}. הקו המקווקו הוא המגמה.`) : null);
+      points.length ? h('p', { class: 'muted small' }, `${deltaText(delta, 'ק״ג')}. הקו המקווקו הוא המגמה.`) : null].filter(Boolean));
   }
 
   // ---- records ----
@@ -136,6 +138,50 @@ export function render({ actions, profile }) {
         : h('p', { class: 'muted small' }, 'שיא חדש נרשם כשמעלים משקל או חזרות מעל מה שעשית בעבר. עוד אין שיאים בתקופה הזאת.'));
   }
 
+  // ---- history ----
+
+  const setLine = (s) => (s.durationSec != null ? `${s.durationSec} שנ׳` : s.weightKg > 0 ? `${fmt(s.weightKg)} ק״ג × ${s.reps}` : `${s.reps} חזרות`);
+
+  async function openDetail(w, slot) {
+    slot.replaceChildren(h('p', { class: 'muted small' }, 'טוען...'));
+    try {
+      const groups = groupWorkoutSets(w.plan, await actions.workoutSets(w.id));
+      slot.replaceChildren(
+        ...groups.map((g) => h('div', { class: 'history-exercise' },
+          h('span', { class: 'exercise-name' }, nameOf(g.exerciseId)),
+          h('span', { class: 'muted small num', dir: 'ltr' }, g.sets.map(setLine).join('  ·  ')))),
+        ...(w.note ? [h('p', { class: 'history-note' }, icon('bolt', { size: 16 }), h('span', null, w.note))] : []));
+    } catch {
+      slot.replaceChildren(errorLine('לא הצלחנו לטעון את הסטים של האימון.'));
+    }
+  }
+
+  function drawHistory() {
+    const rows = actions.history();
+    if (!rows.length) {
+      historySlot.replaceChildren(h('h2', { class: 'progress-title' }, 'היסטוריית אימונים'), h('p', { class: 'muted small' }, 'האימונים שתסיים יופיעו כאן.'));
+      return;
+    }
+    const items = rows.slice(0, historyShown).map((w) => {
+      const detail = h('div', { class: 'history-detail', hidden: true });
+      const head = h('button', { class: 'history-head', type: 'button', 'aria-expanded': 'false' },
+        h('span', { class: 'history-text' }, h('span', { class: 'exercise-name' }, w.title || 'אימון'),
+          h('span', { class: 'muted small num' }, `${formatShortDate(w.startedMs)} · ${formatDuration(w.durationSec || 0)} · ${w.completedSets || 0}/${w.plannedSets || 0} סטים`)),
+        icon('chevronDown', { size: 20 }));
+      let loaded = false;
+      head.addEventListener('click', () => {
+        const open = detail.hidden;
+        detail.hidden = !open;
+        head.setAttribute('aria-expanded', String(open));
+        if (open && !loaded) { loaded = true; openDetail(w, detail); }
+      });
+      return h('li', { class: 'history-row' }, head, detail);
+    });
+    const more = rows.length > historyShown ? h('button', { class: 'btn btn-ghost btn-compact', type: 'button' }, 'הצג עוד') : null;
+    if (more) more.addEventListener('click', () => { historyShown += 10; drawHistory(); });
+    historySlot.replaceChildren(h('h2', { class: 'progress-title' }, 'היסטוריית אימונים'), h('ul', { class: 'history-list' }, ...items), ...(more ? [more] : []));
+  }
+
   // ---- loading ----
 
   async function load() {
@@ -150,6 +196,7 @@ export function render({ actions, profile }) {
       drawExercise();
       drawBody();
       drawRecords();
+      drawHistory();
     } catch {
       if (token !== loadToken) return;
       const retry = h('button', { class: 'btn btn-ghost btn-compact', type: 'button' }, 'נסה שוב');
@@ -157,6 +204,7 @@ export function render({ actions, profile }) {
       exerciseSlot.replaceChildren(errorLine('לא הצלחנו לטעון את ההתקדמות. בדוק את החיבור ונסה שוב.'), retry);
       bodySlot.replaceChildren();
       recordsSlot.replaceChildren();
+      drawHistory();
     }
   }
 
@@ -165,5 +213,5 @@ export function render({ actions, profile }) {
   return h('section', { class: 'screen' },
     h('header', { class: 'screen-head' }, h('h1', { class: 'screen-title' }, 'התקדמות')),
     h('div', { class: 'segmented period-picker', role: 'radiogroup', 'aria-label': 'תקופה' }, ...segButtons),
-    exerciseSlot, bodySlot, recordsSlot);
+    exerciseSlot, bodySlot, recordsSlot, historySlot);
 }

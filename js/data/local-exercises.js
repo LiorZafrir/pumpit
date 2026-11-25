@@ -136,6 +136,11 @@ export const LOCAL_EXERCISES = Object.freeze([
   ex('db-calf-raise', 'הרמות תאומים עם משקולת', 'calves', GH, ['ankles'], 'beg', { gear: ['dumbbells'] })
 ]);
 
+/** Done with the body alone (a bar or a step may be needed): there is no weight to log unless the user adds some. */
+export function isBodyweight(exercise) {
+  return Boolean(exercise) && exercise.location.includes('home') && (exercise.gear || []).every((g) => g === 'pullupBar' || g === 'step');
+}
+
 export function exerciseById(id) {
   return LOCAL_EXERCISES.find((e) => e.id === id) || null;
 }

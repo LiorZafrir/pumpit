@@ -137,3 +137,18 @@ describe('evaluateExercise: timed exercises', () => {
     assert.equal(r.newState.prReps, 40);
   });
 });
+
+describe('bodyweight progression', () => {
+  const item = { sets: 3, repsMin: 10, repsMax: 12 };
+  const run = (reps) => evaluateExercise({ planItem: item, muscle: 'chest', sets: reps.map((r) => ({ reps: r, weightKg: 0 })), prev: null, now: 1 });
+
+  it('reaching the top of the range in every set raises the target by two', () => {
+    const r = run([12, 12, 12]);
+    assert.equal(r.next.targetReps, 14);
+    assert.equal(r.newState.targetReps, 14);
+  });
+
+  it('missing the top keeps the target', () => {
+    assert.equal(run([12, 11, 10]).next.targetReps, 12);
+  });
+});

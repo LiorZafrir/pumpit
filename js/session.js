@@ -3,7 +3,7 @@
 import * as store from './store.js';
 import { deleteCurrentUser, reauthenticate } from './auth.js';
 import { exerciseById } from './data/local-exercises.js';
-import { periodStart } from './logic/progress.js';
+import { periodStart, historyRows } from './logic/progress.js';
 import { composeWorkout } from './logic/compose.js';
 import { applyPatch, settingsOf } from './logic/settings.js';
 import { toDateKey } from './logic/week.js';
@@ -70,7 +70,7 @@ export async function loadAll(user) {
 
 /** The next workout for the signed-in user (see composeWorkout). */
 export function planNext(location, options = {}) {
-  return composeWorkout({ profile: session.profile, workouts: session.workouts, location, ...options });
+  return composeWorkout({ profile: session.profile, workouts: session.workouts, states: session.states, location, ...options });
 }
 
 export const actions = {
@@ -175,7 +175,7 @@ export const actions = {
     const { profile } = session;
     return alternativesFor(a.doc.plan, exerciseIndex, {
       location: a.doc.location, level: profile.level, injuries: Array.isArray(profile.injuries) ? profile.injuries : [],
-      gear: settingsOf(profile).homeGear, style: settingsOf(profile).homeStyle
+      gear: settingsOf(profile).homeGear, style: settingsOf(profile).homeStyle, stretch: true
     });
   },
 
@@ -195,6 +195,25 @@ export const actions = {
     const { id, ...data } = a.doc;
     track(store.saveWorkout(session.user.uid, id, data));
     return true;
+  },
+
+  /** Saves a note on a finished workout (also in the summary, when it is that one). */
+  saveNote(workoutId, note) {
+    const text = String(note || '').trim().slice(0, 500);
+    session.workouts = session.workouts.map((w) => (w.id === workoutId ? { ...w, note: text } : w));
+    if (session.summary && session.summary.workoutId === workoutId) session.summary = { ...session.summary, note: text };
+    track(store.updateWorkoutNote(session.user.uid, workoutId, text));
+    return text;
+  },
+
+  /** Finished workouts, newest first. */
+  history() {
+    return historyRows(session.workouts);
+  },
+
+  /** The sets logged in one workout, in order. */
+  workoutSets(workoutId) {
+    return store.getWorkoutSets(session.user.uid, workoutId);
   },
 
   /** Ends the workout. Returns the summary, or null if nothing was logged (the workout is then discarded). */

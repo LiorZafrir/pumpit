@@ -7,6 +7,8 @@
 export const INCREMENT = { upper: 2.5, lower: 5 };
 const LOWER_MUSCLES = ['quads', 'hamstrings', 'glutes', 'calves'];
 const MAX_WEIGHT = 600;
+export const BODYWEIGHT_REPS_STEP = 2;
+export const BODYWEIGHT_MAX_REPS = 30;
 
 export function regionOf(muscle) {
   return LOWER_MUSCLES.includes(muscle) ? 'lower' : 'upper';
@@ -65,6 +67,9 @@ export function evaluateExercise({ planItem, muscle, sets, prev, now }) {
     nextWeight = Math.min(MAX_WEIGHT, round1(workingWeight + INCREMENT[regionOf(muscle)]));
     nextReps = planItem.repsMin;
     increased = nextWeight > workingWeight;
+  } else if (hitTop) {
+    // Bodyweight: no weight to add, so the target moves up by two repetitions (up to 30).
+    nextReps = Math.min(BODYWEIGHT_MAX_REPS, planItem.repsMax + BODYWEIGHT_REPS_STEP);
   }
 
   const newState = {

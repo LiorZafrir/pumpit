@@ -80,3 +80,17 @@ test('timed records compare hold time', () => {
   const records = recentRecords([t(1, 30), t(2, 40), t(3, 35)], 0);
   assert.equal(records[0].durationSec, 40);
 });
+
+test('history lists finished workouts newest first and groups their sets by exercise', async () => {
+  const { historyRows, groupWorkoutSets, toMs } = await import('../../js/logic/progress.js');
+  const rows = historyRows([
+    { id: 'a', status: 'done', startedAt: 100 }, { id: 'b', status: 'active', startedAt: 300 },
+    { id: 'c', status: 'done', startedAt: { toMillis: () => 200 } }
+  ]);
+  assert.deepEqual(rows.map((r) => r.id), ['c', 'a']);
+  assert.equal(toMs({ toMillis: () => 5 }), 5);
+  const groups = groupWorkoutSets([{ exerciseId: 'x' }, { exerciseId: 'y' }], [
+    { exerciseId: 'y', reps: 5 }, { exerciseId: 'x', reps: 8 }, { exerciseId: 'x', reps: 7 }, { exerciseId: 'z', reps: 1 }
+  ]);
+  assert.deepEqual(groups.map((g) => [g.exerciseId, g.sets.length]), [['x', 2], ['y', 1], ['z', 1]]);
+});

@@ -11,11 +11,12 @@ const LEVEL_RANK = { beg: 0, mid: 1, adv: 2 };
  * Exercises that can replace plan item `index`: same muscle, same location, safe for the injuries,
  * not above the user's level and not already in today's workout. Catalog order is kept.
  */
-export function alternativesFor(plan, index, { location, level, injuries = [], gear = [], style = 'regular' }, catalog = LOCAL_EXERCISES) {
+export function alternativesFor(plan, index, { location, level, injuries = [], gear = [], style = 'regular', stretch = false }, catalog = LOCAL_EXERCISES) {
   const item = plan[index];
   const current = item && catalog.find((e) => e.id === item.exerciseId);
   if (!current) return [];
-  const rank = LEVEL_RANK[level] ?? 0;
+  // With `stretch` the user may also see exercises one level above theirs, as a harder option.
+  const rank = (LEVEL_RANK[level] ?? 0) + (stretch ? 1 : 0);
   const inPlan = new Set(plan.map((p) => p.exerciseId));
   return catalog.filter((e) =>
     e.muscle === current.muscle
@@ -69,4 +70,23 @@ export function rePair(plan, wantPairs, catalog = LOCAL_EXERCISES) {
   const plain = plan.map((p) => ({ ...p, pair: undefined, muscle: p.muscle ?? catalog.find((e) => e.id === p.exerciseId)?.muscle }));
   const paired = wantPairs ? pairExercises(plain) : plain;
   return paired.map((p) => (p.pair === true ? p : { ...p, pair: undefined }));
+}
+
+/** How hard `alt` is next to `current`: 'easier', 'same' or 'harder' (by catalog level). */
+export function difficultyOf(current, alt) {
+  const d = (LEVEL_RANK[alt.level] ?? 0) - (LEVEL_RANK[current.level] ?? 0);
+  return d < 0 ? 'easier' : d > 0 ? 'harder' : 'same';
+}
+
+export const DIFFICULTY_LABELS = { easier: 'קל יותר', same: 'אותה רמה', harder: 'מאתגר יותר' };
+
+/** The nearest easier and harder exercise for the same muscle (or null), picked from `alternativesFor` with stretch. */
+export function easierHarder(plan, index, ctx, catalog = LOCAL_EXERCISES) {
+  const current = catalog.find((e) => e.id === plan[index]?.exerciseId);
+  if (!current) return { easier: null, harder: null };
+  const alts = alternativesFor(plan, index, { ...ctx, stretch: true }, catalog);
+  const rank = (e) => LEVEL_RANK[e.level] ?? 0;
+  const easier = alts.filter((e) => rank(e) < rank(current)).sort((a, b) => rank(b) - rank(a))[0] ?? null;
+  const harder = alts.filter((e) => rank(e) > rank(current)).sort((a, b) => rank(a) - rank(b))[0] ?? null;
+  return { easier, harder };
 }

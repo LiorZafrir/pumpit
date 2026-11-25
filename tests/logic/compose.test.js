@@ -120,3 +120,17 @@ test('the estimate is close to the chosen time for 45 minutes and up', () => {
     }
   }
 });
+
+test('a bodyweight exercise the user mastered gets a higher rep range, a weighted one does not', () => {
+  const base = composeWorkout({ profile: { goal: 'tone', level: 'mid', daysPerWeek: 3, injuries: [], settings: {} }, workouts: [], location: 'home' });
+  const pushUp = base.plan.exercises.find((e) => e.exerciseId === 'local-push-up' || e.exerciseId === 'local-incline-push-up');
+  assert.ok(pushUp, 'a push-up variant is planned at home');
+  const states = { [pushUp.exerciseId]: { targetReps: pushUp.repsMax + 2 } };
+  const next = composeWorkout({ profile: { goal: 'tone', level: 'mid', daysPerWeek: 3, injuries: [], settings: {} }, workouts: [], location: 'home', states });
+  const after = next.plan.exercises.find((e) => e.exerciseId === pushUp.exerciseId);
+  assert.equal(after.repsMax, pushUp.repsMax + 2);
+  assert.equal(after.repsMin, pushUp.repsMax);
+  const gym = composeWorkout({ profile: { goal: 'tone', level: 'mid', daysPerWeek: 3, injuries: [], settings: {} }, workouts: [], location: 'gym', states: { 'local-machine-chest-press': { targetReps: 20 } } });
+  const press = gym.plan.exercises.find((e) => e.exerciseId === 'local-machine-chest-press');
+  if (press) assert.equal(press.repsMax, 12);
+});

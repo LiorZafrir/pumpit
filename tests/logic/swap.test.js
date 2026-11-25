@@ -106,3 +106,12 @@ test('an edited list with fewer exercises is estimated shorter', () => {
   const p = suggested();
   assert.ok(estimateEdited({ profile: editProfile, exercises: removePlanItem(p, 0) }) < estimateEdited({ profile: editProfile, exercises: p }));
 });
+
+test('stretch also offers exercises one level above the user, labelled harder', async () => {
+  const { easierHarder, difficultyOf } = await import('../../js/logic/swap.js');
+  const p = [{ exerciseId: 'local-push-up', sets: 3 }];
+  const ctx2 = { location: 'home', level: 'beg', injuries: [], gear: [] };
+  assert.ok(alternativesFor(p, 0, { ...ctx2, stretch: true }).length >= alternativesFor(p, 0, ctx2).length);
+  const { harder } = easierHarder(p, 0, ctx2);
+  if (harder) assert.equal(difficultyOf(exerciseById('local-push-up'), harder), 'harder');
+});

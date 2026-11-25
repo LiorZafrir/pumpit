@@ -5,7 +5,8 @@ import { recommendedSplit } from './split.js';
 import { lastFinished } from './streak.js';
 import { settingsOf } from './settings.js';
 import { LONG_OPTIONS, MAX_EXERCISES, SHORT_OPTIONS, estimateSeconds, growPlan, pairExercises, shortRestSec, shortenPlan } from './shortmode.js';
-import { exerciseById } from '../data/local-exercises.js';
+import { exerciseById, isBodyweight } from '../data/local-exercises.js';
+import { BODYWEIGHT_REPS_STEP } from './progression.js';
 import { buildWarmup, warmupSeconds } from './warmup.js';
 
 export function splitFor(profile) {
@@ -20,7 +21,7 @@ export function splitFor(profile) {
  * With the superset setting on, a normal plan is paired too. `estimateSec` is a rough length including the warm-up.
  * @param {{ profile: object, workouts: object[], location: 'gym'|'home', minutes?: number|null, focus?: string[] }} p
  */
-export function composeWorkout({ profile, workouts, location, minutes = null, focus = [] }) {
+export function composeWorkout({ profile, workouts, location, minutes = null, focus = [], states = {} }) {
   const settings = settingsOf(profile);
   const areas = normalizeFocus(focus);
   const custom = areas.length > 0;
@@ -68,6 +69,8 @@ export function composeWorkout({ profile, workouts, location, minutes = null, fo
     exercises = pairExercises(exercises);
   }
 
+  exercises = exercises.map((e) => withBodyweightTarget(e, states));
+
   return {
     next,
     plan: {
@@ -88,4 +91,14 @@ export function estimateEdited({ profile, exercises, minutes = null }) {
   const warm = settings.warmup ? warmupSeconds(buildWarmup(muscles)) : 0;
   const items = exercises.map((e) => ({ ...e, muscle: e.muscle ?? exerciseById(e.exerciseId)?.muscle }));
   return estimateSeconds(items, rest) + warm;
+}
+
+/**
+ * A bodyweight exercise the user already mastered (they reached the top of the range in every set) asks for more:
+ * the saved target, when higher than the range, moves the range up.
+ */
+export function withBodyweightTarget(item, states) {
+  const target = states?.[item.exerciseId]?.targetReps;
+  if (item.repsMax == null || !(target > item.repsMax) || !isBodyweight(exerciseById(item.exerciseId))) return item;
+  return { ...item, repsMin: Math.max(item.repsMin, target - BODYWEIGHT_REPS_STEP), repsMax: target };
 }

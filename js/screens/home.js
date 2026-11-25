@@ -4,8 +4,8 @@ import { MUSCLE_LABELS, SESSION_TITLES } from '../ui/labels.js';
 import { exerciseById } from '../data/local-exercises.js';
 import { doneDates, doneThisWeek, weeklyStreak } from '../logic/streak.js';
 import { weekDays } from '../logic/week.js';
-import { LONG_OPTIONS, MAX_EXERCISES, SHORT_OPTIONS } from '../logic/shortmode.js';
-import { addableExercises, addPlanItem, alternativesFor, rePair, removePlanItem, swapPlanItem } from '../logic/swap.js';
+import { LONG_OPTIONS, MAX_EXERCISES, MAX_SETS, SHORT_OPTIONS } from '../logic/shortmode.js';
+import { DIFFICULTY_LABELS, addableExercises, addPlanItem, alternativesFor, difficultyOf, easierHarder, rePair, removePlanItem, swapPlanItem } from '../logic/swap.js';
 import { estimateEdited } from '../logic/compose.js';
 import { settingsOf } from '../logic/settings.js';
 import { FOCUS_LABELS, FOCUS_OPTIONS, focusTitle, normalizeFocus } from '../logic/focus.js';
@@ -100,20 +100,39 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
     const item = list[index];
     const ex = exerciseById(item.exerciseId);
     const sheet = openSheet({ title: ex ? ex.name : 'תרגיל' });
-    const alts = alternativesFor(list, index, planContext());
+    const alts = alternativesFor(list, index, { ...planContext(), stretch: true });
+    const { easier, harder } = easierHarder(list, index, planContext());
     const swap = h('button', { class: 'btn btn-primary', type: 'button', disabled: alts.length === 0 }, icon('swap', { size: 20 }), h('span', null, 'החלף בתרגיל אחר'));
     swap.addEventListener('click', () => { sheet.close(); openSwapSheet(index, alts); });
+    const pick = (alt, label) => {
+      const b = h('button', { class: 'btn btn-ghost', type: 'button', disabled: !alt }, h('span', null, label), alt ? h('span', { class: 'small muted' }, alt.name) : h('span', { class: 'small muted' }, 'אין אפשרות מתאימה'));
+      b.addEventListener('click', () => { sheet.close(); edit(swapPlanItem(shownList(), index, alt, { goal: profile.goal, level: profile.level })); });
+      return b;
+    };
+    const setsValue = h('span', { class: 'num sets-value' }, String(item.sets));
+    const setSets = (delta) => {
+      const l = shownList();
+      const next = Math.min(MAX_SETS, Math.max(1, l[index].sets + delta));
+      custom = l.map((e, i) => (i === index ? { ...e, sets: next } : e));
+      setsValue.textContent = String(next);
+      drawPlan();
+    };
+    const minus = h('button', { class: 'step-btn', type: 'button', 'aria-label': 'פחות סטים' }, icon('minus', { size: 22 }));
+    const plus = h('button', { class: 'step-btn', type: 'button', 'aria-label': 'יותר סטים' }, icon('plus', { size: 22 }));
+    minus.addEventListener('click', () => setSets(-1));
+    plus.addEventListener('click', () => setSets(1));
     const remove = h('button', { class: 'btn btn-ghost btn-danger-text', type: 'button' }, 'הסר מהאימון');
-    remove.addEventListener('click', () => { sheet.close(); edit(removePlanItem(list, index)); });
+    remove.addEventListener('click', () => { sheet.close(); edit(removePlanItem(shownList(), index)); });
+    if (!alts.length) sheet.body.append(h('p', { class: 'sheet-text' }, 'אין תרגיל חלופי לאותו שריר שמתאים למיקום, לרמה ולאזורים הרגישים שלך.'));
     sheet.body.append(
-      alts.length ? null : h('p', { class: 'sheet-text' }, 'אין תרגיל חלופי לאותו שריר שמתאים למיקום, לרמה ולאזורים הרגישים שלך.'),
-      h('div', { class: 'sheet-actions' }, swap, remove));
+      h('div', { class: 'sets-row' }, h('span', null, 'מספר סטים'), h('div', { class: 'sets-stepper', dir: 'ltr' }, minus, setsValue, plus)),
+      h('div', { class: 'sheet-actions' }, pick(easier, 'קל יותר'), pick(harder, 'מאתגר יותר'), swap, remove));
   }
 
-  function chooserRow(ex, label, onPick) {
+  function chooserRow(ex, label, onPick, tag = '') {
     const where = ex.location.length === 2 ? 'חדר כושר או בית' : ex.location[0] === 'gym' ? 'חדר כושר' : 'בית';
     const row = h('button', { class: 'swap-row', type: 'button' },
-      h('span', { class: 'swap-text' }, h('span', { class: 'swap-name' }, ex.name), h('span', { class: 'small muted' }, `${MUSCLE_LABELS[ex.muscle]} · ${where}`)),
+      h('span', { class: 'swap-text' }, h('span', { class: 'swap-name' }, ex.name), h('span', { class: 'small muted' }, `${tag ? tag + ' · ' : ''}${MUSCLE_LABELS[ex.muscle]} · ${where}`)),
       h('span', { class: 'swap-pill' }, label));
     row.addEventListener('click', onPick);
     return row;
@@ -123,12 +142,13 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
     const sheet = openSheet({ title: 'החלפת תרגיל' });
     const list = shownList();
     const { goal, level } = planContext();
+    const current = exerciseById(list[index].exerciseId);
     sheet.body.append(
-      h('p', { class: 'sheet-text' }, 'בחר תרגיל חלופי לאותו שריר.'),
+      h('p', { class: 'sheet-text' }, 'בחר תרגיל חלופי לאותו שריר. כל תרגיל מסומן כקל יותר, באותה רמה או מאתגר יותר.'),
       h('div', { class: 'swap-list' }, ...alts.map((alt) => chooserRow(alt, 'החלף', () => {
         sheet.close();
         edit(swapPlanItem(list, index, alt, { goal, level }));
-      }))));
+      }, current ? DIFFICULTY_LABELS[difficultyOf(current, alt)] : ''))));
   }
 
   function openAddSheet() {

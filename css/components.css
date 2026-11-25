@@ -431,3 +431,30 @@
 .exercise-edit { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 0; background: none; border: 0; color: inherit; font: inherit; text-align: start; cursor: pointer; }
 .exercise-edit > svg { flex: none; color: var(--text-3); }
 .btn[hidden] { display: none; }
+
+/* bodyweight hint, the list during a workout, sets in the edit sheet */
+.count-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; min-width: 44px; padding-inline: 8px; background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; }
+.workout-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.list-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 10px; border-radius: var(--r-md); }
+.list-row.now { background: var(--card-strong); border: 1px solid var(--accent); }
+.list-row.done { color: var(--muted); }
+.list-mark { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--card); font-size: 14px; font-weight: 700; }
+.list-row.done .list-mark { background: var(--accent); color: var(--on-accent); }
+.list-name { flex: 1; font-weight: 500; min-width: 0; }
+.sets-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; }
+.sets-stepper { display: flex; align-items: center; gap: 12px; }
+.sets-value { min-width: 24px; text-align: center; font-weight: 800; font-size: 20px; }
+.menu-option, .sheet-actions .btn:has(> .small) { flex-direction: column; align-items: flex-start; gap: 2px; }
+
+/* history and the workout note */
+.history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.history-row { border-block-start: 1px solid var(--line); }
+.history-row:first-child { border-block-start: 0; }
+.history-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 0; background: none; border: 0; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.history-head[aria-expanded="true"] > svg { transform: rotate(180deg); }
+.history-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.history-detail { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 14px; }
+.history-exercise { display: flex; flex-direction: column; gap: 2px; }
+.history-note { display: flex; gap: 8px; align-items: flex-start; color: var(--text-2); font-size: 14px; margin: 0; }
+.note-card { display: flex; flex-direction: column; gap: 10px; padding: 18px; }
+.note-input { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: var(--r-md); background: var(--card); border: 1px solid var(--line); color: var(--text); font: inherit; resize: vertical; }

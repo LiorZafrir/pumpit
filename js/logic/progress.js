@@ -91,3 +91,25 @@ export function recentRecords(sets, since, limit = 5) {
   }
   return [...latest.values()].sort((a, b) => b.at - a.at).slice(0, limit);
 }
+
+/** A Firestore timestamp or a number of milliseconds, as milliseconds. */
+export function toMs(value) {
+  if (typeof value === 'number') return value;
+  if (value && typeof value.toMillis === 'function') return value.toMillis();
+  return 0;
+}
+
+/** Finished workouts, newest first, with the start in milliseconds. */
+export function historyRows(workouts) {
+  return workouts
+    .filter((w) => w.status === 'done')
+    .map((w) => ({ ...w, startedMs: toMs(w.startedAt) }))
+    .sort((a, b) => b.startedMs - a.startedMs);
+}
+
+/** The sets of one workout grouped by exercise: the plan's order first, then anything else that was logged. */
+export function groupWorkoutSets(plan, sets) {
+  const order = [...(Array.isArray(plan) ? plan.map((p) => p.exerciseId) : []), ...sets.map((s) => s.exerciseId)];
+  const ids = [...new Set(order)];
+  return ids.map((exerciseId) => ({ exerciseId, sets: sets.filter((s) => s.exerciseId === exerciseId) })).filter((g) => g.sets.length);
+}

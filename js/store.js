@@ -52,6 +52,11 @@ export async function getRecentWorkouts(uid, count = 120) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+/** The user's own words about how a workout went. */
+export function updateWorkoutNote(uid, workoutId, note) {
+  return updateDoc(doc(db, 'users', uid, 'workouts', workoutId), { note });
+}
+
 export async function getWorkoutSets(uid, workoutId) {
   const snap = await getDocs(query(col(uid, 'sets'), where('workoutId', '==', workoutId)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.at || 0) - (b.at || 0));

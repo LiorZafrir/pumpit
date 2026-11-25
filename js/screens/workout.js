@@ -5,7 +5,8 @@ import { createRing } from '../ui/ring.js';
 import { openSheet } from '../ui/sheet.js';
 import { MUSCLE_LABELS, formatClock } from '../ui/labels.js';
 import { exerciseMedia } from '../ui/exercise-media.js';
-import { exerciseById } from '../data/local-exercises.js';
+import { exerciseById, isBodyweight } from '../data/local-exercises.js';
+import { DIFFICULTY_LABELS, difficultyOf } from '../logic/swap.js';
 import { guideFor } from '../data/exercise-guides.js';
 import { MAX_DROPS, nextUp, partnerOf, positionFrom, progressFraction } from '../logic/workout-state.js';
 import { settingsOf } from '../logic/settings.js';
@@ -16,6 +17,7 @@ import { beep, keepAwake, releaseAwake, unlockAudio, vibrate } from '../services
 const WEIGHT_STEP = 2.5;
 const REST_ADJUST_SEC = 15;
 
+const REST_END_PAUSE_MS = 900; // the beep is heard and the screen says it is over before moving on
 const round1 = (n) => Math.round(n * 10) / 10;
 const fmt = (n) => String(round1(n));
 // LRM after the Hebrew unit keeps "65 ק״ג × 9" in reading order inside a left-to-right run.
@@ -64,12 +66,15 @@ export function render({ workout, states, actions, navigate, profile }) {
   const plan = workout.doc.plan;
   const root = h('section', { class: 'screen workout' });
   let restTimer = null;
+  let autoTimer = null;
 
   keepAwake();
 
   const stopRest = () => {
     if (restTimer) clearInterval(restTimer);
     restTimer = null;
+    clearTimeout(autoTimer);
+    autoTimer = null;
   };
 
   function leave(name) {
@@ -117,6 +122,22 @@ export function render({ workout, states, actions, navigate, profile }) {
       }), 'btn-ghost btn-danger-text')));
   }
 
+  // The whole workout at a glance: what is done, where you are, what is left. Read only.
+  function openListSheet(pos) {
+    const sheet = openSheet({ title: 'רשימת התרגילים' });
+    const rows = plan.map((item, i) => {
+      const ex = exerciseById(item.exerciseId);
+      const done = workout.sets.filter((s) => s.exerciseId === item.exerciseId).length;
+      const status = done >= item.sets ? 'done' : i === pos.exerciseIndex ? 'now' : done > 0 ? 'part' : 'todo';
+      const mark = { done: 'הושלם', now: 'עכשיו', part: `${done}/${item.sets}`, todo: `${item.sets} סטים` }[status];
+      return h('li', { class: `list-row ${status}` },
+        h('span', { class: 'list-mark' }, status === 'done' ? icon('check', { size: 18 }) : String(i + 1)),
+        h('span', { class: 'list-name' }, ex ? ex.name : 'תרגיל'),
+        h('span', { class: 'small muted num' }, mark));
+    });
+    sheet.body.append(h('ol', { class: 'workout-list' }, ...rows));
+  }
+
   const lastSetOf = (exerciseId) => workout.sets.filter((s) => s.exerciseId === exerciseId).at(-1) || null;
 
   // A weight picked on the exercise screen before the set, until that set is logged.
@@ -153,7 +174,8 @@ export function render({ workout, states, actions, navigate, profile }) {
         : (lastReps[pos.setIndex] ?? lastReps[lastReps.length - 1] ?? item.repsMin);
 
     const sheet = openSheet({ title: `${exercise ? exercise.name : 'תרגיל'} · סט ${pos.setIndex + 1}/${item.sets}` });
-    const weight = timed ? null : stepper({ label: 'משקל', value: startWeight, step: WEIGHT_STEP, min: 0, max: 600, unit: 'ק״ג' });
+    const bodyweight = isBodyweight(exercise);
+    const weight = timed ? null : stepper({ label: bodyweight ? 'משקל נוסף (אם יש)' : 'משקל', value: startWeight, step: WEIGHT_STEP, min: 0, max: 600, unit: 'ק״ג' });
     const reps = timed
       ? stepper({ label: 'זמן', value: startReps, step: 5, min: 0, max: 3600, unit: 'שנ׳' })
       : stepper({ label: 'חזרות', value: startReps, step: 1, min: 0, max: 300, unit: '' });
@@ -202,6 +224,7 @@ export function render({ workout, states, actions, navigate, profile }) {
     });
     sheet.body.append(
       h('div', { class: 'sheet-steppers' }, ...(weight ? [weight.el] : []), reps.el),
+      ...(bodyweight && !timed ? [h('p', { class: 'muted small' }, 'בתרגיל משקל גוף אין צורך לרשום משקל. השאר 0, ועדכן רק אם הוספת משקל (אפודה, משקולת).')] : []),
       ...(settings.dropset && !timed ? [dropList, dropBtn] : []),
       confirm);
   }
@@ -240,24 +263,26 @@ export function render({ workout, states, actions, navigate, profile }) {
 
     const lastLine = lastReps.length
       ? h('p', { class: 'muted small' }, 'בפעם הקודמת: ',
-        h('span', { class: 'num', dir: 'ltr' }, timed ? `${lastReps.join(' · ')} שנ׳` : `${kg(state.workingWeightKg || 0)} × ${lastReps.join(' · ')}`))
-      : h('p', { class: 'muted small' }, 'בפעם הראשונה: בחר משקל שמרגיש נכון');
+        h('span', { class: 'num', dir: 'ltr' }, timed ? `${lastReps.join(' · ')} שנ׳` : isBodyweight(exercise) && !state.workingWeightKg ? `${lastReps.join(' · ')} חזרות‎` : `${kg(state.workingWeightKg || 0)} × ${lastReps.join(' · ')}`))
+      : h('p', { class: 'muted small' }, isBodyweight(exercise) ? 'בפעם הראשונה: עשה כמה חזרות שמרגישות נכון' : 'בפעם הראשונה: בחר משקל שמרגיש נכון');
 
     // Set the weight before the set: the log sheet then starts from it, and it is what gets saved for next time.
     const startKg = currentWeightKg(item.exerciseId, state);
     const weightPicker = timed ? null : h('div', { class: 'weight-picker' }, stepper({
-      label: 'משקל לסט הזה', value: startKg ?? 0, step: WEIGHT_STEP, min: 0, max: 600, unit: 'ק״ג',
+      label: isBodyweight(exercise) ? 'משקל נוסף (אם יש)' : 'משקל לסט הזה', value: startKg ?? 0, step: WEIGHT_STEP, min: 0, max: 600, unit: 'ק״ג',
       onChange: (v) => { plannedKg[item.exerciseId] = v; }
     }).el);
 
     const done = h('button', { class: 'btn btn-primary', type: 'button' }, 'סיימתי סט');
     done.addEventListener('click', () => { unlockAudio(); openLogSheet(pos); });
+    const countBtn = h('button', { class: 'count-btn small muted num', type: 'button', 'aria-label': 'רשימת התרגילים באימון' }, `${workout.sets.length}/${planned}`, icon('chevronDown', { size: 16 }));
+    countBtn.addEventListener('click', () => openListSheet(pos));
 
-    root.replaceChildren(
+    root.replaceChildren(...[
       h('div', { class: 'ob-top' }, menu,
         h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'התקדמות באימון', 'aria-valuemin': 0, 'aria-valuemax': planned, 'aria-valuenow': workout.sets.length },
           h('span', { style: `width:${fraction * 100}%` })),
-        h('span', { class: 'small muted num' }, `${workout.sets.length}/${planned}`)),
+        countBtn),
       h('header', { class: 'ob-head' },
         h('h1', { class: 'ob-title' }, exercise ? exercise.name : 'תרגיל'),
         h('p', { class: 'muted' }, `${exercise ? MUSCLE_LABELS[exercise.muscle] : ''} · תרגיל ${pos.exerciseIndex + 1} מתוך ${plan.length}`)),
@@ -271,7 +296,7 @@ export function render({ workout, states, actions, navigate, profile }) {
       lastLine,
       warmupSetHint(item, pos, state),
       guideBlock(item.exerciseId),
-      h('div', { class: 'ob-actions' }, done, swapButton(pos.exerciseIndex)));
+      h('div', { class: 'ob-actions' }, done, swapButton(pos.exerciseIndex))].filter(Boolean));
   }
 
   function supersetNote(exerciseIndex) {
@@ -306,10 +331,11 @@ export function render({ workout, states, actions, navigate, profile }) {
   function openSwapSheet(exerciseIndex) {
     const sheet = openSheet({ title: 'החלפת תרגיל' });
     const list = h('div', { class: 'swap-list' });
+    const current = exerciseById(plan[exerciseIndex].exerciseId);
     for (const alt of actions.alternatives(exerciseIndex)) {
       const where = alt.location.length === 2 ? 'חדר כושר או בית' : alt.location[0] === 'gym' ? 'חדר כושר' : 'בית';
       const row = h('button', { class: 'swap-row', type: 'button' },
-        h('span', { class: 'swap-text' }, h('span', { class: 'swap-name' }, alt.name), h('span', { class: 'small muted' }, where)),
+        h('span', { class: 'swap-text' }, h('span', { class: 'swap-name' }, alt.name), h('span', { class: 'small muted' }, `${current ? DIFFICULTY_LABELS[difficultyOf(current, alt)] + ' · ' : ''}${where}`)),
         h('span', { class: 'swap-pill' }, icon('swap', { size: 18 }), 'החלף'));
       row.addEventListener('click', () => {
         sheet.close();
@@ -394,12 +420,15 @@ export function render({ workout, states, actions, navigate, profile }) {
         skip.classList.replace('btn-ghost', 'btn-primary');
         beep();
         vibrate([250, 120, 250]);
+        // The rest is over: move on to the next set without a tap (adding time or skipping within this moment wins).
+        autoTimer = setTimeout(() => { if (alerted && root.isConnected) showExercise(); }, REST_END_PAUSE_MS);
       }
     };
     const adjust = (deltaSec) => {
       endAt += deltaSec * 1000;
       totalMs = Math.max(1000, totalMs + deltaSec * 1000);
       if (endAt - Date.now() > 0 && alerted) {
+        clearTimeout(autoTimer);
         alerted = false;
         root.classList.remove('rest-done');
         skip.textContent = 'דלג';
@@ -418,7 +447,7 @@ export function render({ workout, states, actions, navigate, profile }) {
     const doneSets = workout.sets.filter((s) => s.exerciseId === doneItem.exerciseId);
     const doneExercise = exerciseById(doneItem.exerciseId);
 
-    root.replaceChildren(
+    root.replaceChildren(...[
       h('header', { class: 'ob-head center' }, h('h1', { class: 'ob-title' }, 'מנוחה')),
       h('div', { class: 'rest-ring' }, ring.el, clock),
       h('div', { class: 'rest-controls' }, minus, skip, plus),
@@ -430,7 +459,7 @@ export function render({ workout, states, actions, navigate, profile }) {
         h('span', { class: 'muted small' }, `הושלמו · ${doneExercise ? doneExercise.name : ''}`),
         h('ul', { class: 'done-list' }, ...doneSets.map((s, i) =>
           h('li', { class: 'num' }, h('span', null, `סט ${i + 1}`),
-            h('span', { dir: 'ltr' }, setText(s)))))));
+            h('span', { dir: 'ltr' }, setText(s))))))].filter(Boolean));
 
     restTimer = setInterval(tick, 250);
     tick();
