@@ -88,7 +88,18 @@ export const MEDIA_IDS = Object.freeze({
   'local-single-leg-bridge': 'Single_Leg_Glute_Bridge',
   'local-db-lunge': 'Dumbbell_Lunges',
   'local-db-bent-row': 'Bent_Over_Two-Dumbbell_Row',
-  'local-db-calf-raise': 'Calf_Raise_On_A_Dumbbell'
+  'local-db-calf-raise': 'Calf_Raise_On_A_Dumbbell',
+  'local-jump-rope': 'Rope_Jumping',
+  'local-ab-wheel': 'Ab_Roller',
+  'local-trx-row': 'Suspended_Row',
+  'local-trx-push-up': 'Suspended_Push-Up',
+  'local-trx-split-squat': 'Suspended_Split_Squat',
+  'local-trx-reverse-crunch': 'Suspended_Reverse_Crunch',
+  'local-bench-db-press': 'Dumbbell_Bench_Press',
+  'local-bench-incline-press': 'Incline_Dumbbell_Press',
+  'local-bench-fly': 'Dumbbell_Flyes',
+  'local-bench-seated-press': 'Seated_Dumbbell_Press',
+  'local-bench-incline-hammer': 'Incline_Hammer_Curls'
 });
 
 export function mediaFrames(exerciseId) {

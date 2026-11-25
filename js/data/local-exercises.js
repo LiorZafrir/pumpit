@@ -133,7 +133,20 @@ export const LOCAL_EXERCISES = Object.freeze([
   ex('single-leg-bridge', 'גשר ישבן ברגל אחת', 'glutes', H, ['hips'], 'mid'),
   ex('db-lunge', 'מכרעים עם משקולות', 'quads', GH, ['knees', 'hips'], 'mid', { gear: ['dumbbells'] }),
   ex('db-bent-row', 'חתירה בשתי משקולות בהטיית גו', 'back', GH, ['lowerBack'], 'beg', { gear: ['dumbbells'] }),
-  ex('db-calf-raise', 'הרמות תאומים עם משקולת', 'calves', GH, ['ankles'], 'beg', { gear: ['dumbbells'] })
+  ex('db-calf-raise', 'הרמות תאומים עם משקולת', 'calves', GH, ['ankles'], 'beg', { gear: ['dumbbells'] }),
+
+  // home: jump rope, ab wheel, suspension straps, a bench
+  ex('jump-rope', 'קפיצה בחבל', 'calves', H, ['ankles', 'knees'], 'beg', { gear: ['jumpRope'], timed: true }),
+  ex('ab-wheel', 'גלגל בטן', 'core', H, ['shoulders', 'lowerBack', 'wrists'], 'mid', { gear: ['abWheel'] }),
+  ex('trx-row', 'חתירה ברצועות', 'back', H, ['elbows'], 'beg', { gear: ['trx'] }),
+  ex('trx-push-up', 'שכיבות סמיכה ברצועות', 'chest', H, ['wrists', 'shoulders'], 'beg', { gear: ['trx'] }),
+  ex('trx-split-squat', 'סקוואט מפוצל ברצועות', 'quads', H, ['knees', 'hips'], 'mid', { gear: ['trx'] }),
+  ex('trx-reverse-crunch', 'כפיפת בטן הפוכה ברצועות', 'core', H, ['shoulders', 'wrists'], 'beg', { gear: ['trx'] }),
+  ex('bench-db-press', 'לחיצת חזה עם משקולות על ספסל', 'chest', H, ['shoulders', 'wrists'], 'beg', { gear: ['dumbbells', 'bench'] }),
+  ex('bench-incline-press', 'לחיצת חזה בשיפוע עם משקולות', 'chest', H, ['shoulders', 'wrists'], 'mid', { gear: ['dumbbells', 'bench'] }),
+  ex('bench-fly', 'פרפר עם משקולות על ספסל', 'chest', H, ['shoulders'], 'beg', { gear: ['dumbbells', 'bench'] }),
+  ex('bench-seated-press', 'לחיצת כתפיים בישיבה על ספסל', 'shoulders', H, ['shoulders', 'wrists'], 'beg', { gear: ['dumbbells', 'bench'] }),
+  ex('bench-incline-hammer', 'כפיפת פטישים על ספסל משופע', 'biceps', H, ['elbows'], 'beg', { gear: ['dumbbells', 'bench'] })
 ]);
 
 /** Done with the body alone (a bar or a step may be needed): there is no weight to log unless the user adds some. */

@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { LOCAL_EXERCISES, MUSCLES, exerciseById } from '../../js/data/local-exercises.js';
 import { INJURY_AREAS } from '../../js/logic/onboarding.js';
-import { SLOTS, nextSession, planWorkout } from '../../js/logic/planner.js';
+import { SLOTS, availableAt, nextSession, planWorkout } from '../../js/logic/planner.js';
 import { recommendedSplit } from '../../js/logic/split.js';
 
 const base = { goal: 'mass', level: 'mid', injuries: [] };
@@ -179,6 +179,23 @@ describe('home gear and style', () => {
       assert.ok(ids.some((id) => (exerciseById(id).gear || []).includes(g)), g);
       assert.ok(ids.every((id) => (exerciseById(id).gear || []).every((x) => x === g)), g);
     }
+  });
+
+  // Which catalog exercises can be done at home with exactly this gear.
+  const homeWith = (gear) => LOCAL_EXERCISES.filter((e) => availableAt(e, { location: 'home', gear, style: 'regular' }) && (e.gear || []).length);
+
+  it('a jump rope, suspension straps and an ab wheel each unlock their own exercises and nothing else', () => {
+    for (const g of ['jumpRope', 'trx', 'abWheel']) {
+      const ids = homeWith([g]);
+      assert.ok(ids.length > 0, g);
+      assert.ok(ids.every((e) => e.gear.every((x) => x === g)), g);
+    }
+  });
+
+  it('a bench alone unlocks nothing, with dumbbells it unlocks the bench exercises', () => {
+    assert.equal(homeWith(['bench']).length, 0);
+    assert.ok(homeWith(['bench', 'dumbbells']).some((e) => e.gear.includes('bench')));
+    assert.ok(homeWith(['dumbbells']).every((e) => !e.gear.includes('bench')));
   });
 
   it('calisthenics and military leave out the kettlebell too, but keep bands and the step', () => {
