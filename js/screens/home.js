@@ -59,6 +59,7 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
   const titleEl = h('h2', { class: 'workout-title' });
   const focusLabel = h('span', { class: 'focus-label' });
   const metaEl = h('p', { class: 'muted small num' });
+  const shortNote = h('p', { class: 'muted small', hidden: true });
   const listEl = h('ul', { class: 'exercise-list' });
   const errorSlot = h('div', { role: 'alert' });
   const startBtn = h('button', { class: 'btn btn-primary', type: 'button' });
@@ -180,6 +181,7 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
       listEl.replaceChildren(...rowsFor(active.plan));
       addBtn.hidden = true;
       resetBtn.hidden = true;
+      shortNote.hidden = true;
       startBtn.textContent = 'המשך אימון';
       startBtn.disabled = false;
       return;
@@ -195,6 +197,10 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
     listEl.replaceChildren(...(shown.length
       ? rowsFor(shown, true)
       : [h('li', { class: 'muted small' }, custom ? 'לא נשארו תרגילים באימון. אפשר להוסיף תרגיל או לחזור לאימון המוצע.' : 'האזורים הרגישים שסימנת מוציאים את כל התרגילים. אפשר לעדכן אותם בפרופיל.')]));
+    // The chosen time cannot be reached when there are no more suitable exercises (home without gear, injuries): say so.
+    const tooShort = minutes >= 45 && estimate / 60 < minutes - 10;
+    shortNote.hidden = !tooShort;
+    shortNote.textContent = tooShort ? `אין מספיק תרגילים מתאימים כדי להגיע ל-${minutes} דקות. אפשר להוסיף תרגילים בעצמך, או לסמן ציוד בפרופיל.` : '';
     addBtn.hidden = shown.length >= MAX_EXERCISES;
     resetBtn.hidden = !custom;
     startBtn.textContent = 'התחל אימון';
@@ -285,7 +291,7 @@ export function render({ user, profile, workouts, active, planNext, actions, nav
       active ? null : h('div', { class: 'row duration-row' },
         h('span', { class: 'muted small' }, 'כמה זמן? (דקות)'),
         h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'משך האימון' }, ...durationButtons)),
-      h('div', null, titleEl, metaEl),
+      h('div', null, titleEl, metaEl, shortNote),
       listEl,
       addBtn,
       resetBtn,

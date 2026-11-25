@@ -103,7 +103,7 @@ export function shortenPlan(exercises, minutes, restSec, { alwaysPair = false, r
 }
 
 /**
- * Fills a long workout (more than an hour) by adding exercises, not sets: the `extras` (more exercises for the same muscles, best first)
+ * Fills a long workout (more than an hour) by adding exercises first, and sets only when there are no more exercises to add: the `extras` (more exercises for the same muscles, best first)
  * are added while they still fit, up to MAX_EXERCISES. Normal rests. With supersets on, an added exercise that would be left unpaired is not kept.
  * @returns {{ exercises: object[], restSec: number, estimateSec: number }}
  */
@@ -119,6 +119,19 @@ export function growPlan(base, extras, minutes, restSec, { alwaysPair = false, r
     if (!fits(next)) break;
     items = next;
   }
+  // Only when there are no more exercises to add (none left for this muscle and place, or the limit) do sets fill the rest of the time.
+  const exhausted = items.length >= MAX_EXERCISES || extras.every((e) => items.some((i) => i.exerciseId === e.exerciseId));
+  if (exhausted) {
+    for (let grew = true; grew;) {
+      grew = false;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].sets >= MAX_SETS || items[i].durationSec != null) continue;
+        const next = items.map((e, j) => (j === i ? { ...e, sets: e.sets + 1 } : e));
+        if (fits(next)) { items = next; grew = true; }
+      }
+    }
+  }
+
   // An odd count leaves one exercise out of the supersets: drop the last one added.
   if (alwaysPair && items.length % 2 === 1 && items.length > base.length) items = items.slice(0, -1);
 

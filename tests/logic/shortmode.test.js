@@ -118,8 +118,9 @@ describe('growPlan', () => {
     for (const out of [a, b]) {
       assert.ok(out.exercises.length <= MAX_EXERCISES);
       assert.ok(out.exercises.every((e) => e.sets <= MAX_SETS));
-      // more time means more exercises, never more sets than the normal workout has
-      assert.ok(out.exercises.every((e, i) => i >= normal.length || e.sets === normal[i].sets));
+      // sets only grow once there are no more exercises to add
+      const exhausted = out.exercises.length >= MAX_EXERCISES || extras.every((x) => out.exercises.some((e) => e.exerciseId === x.exerciseId));
+      if (!exhausted) assert.ok(out.exercises.every((e, i) => i >= normal.length || e.sets === normal[i].sets));
     }
   });
 
